@@ -2082,7 +2082,7 @@ fun SetupBottomBar(
     )
 
     Surface(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer(),
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = AbsoluteSmoothCornerShape(
             cornerRadiusTR = 36.dp,
