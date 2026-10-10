@@ -448,7 +448,6 @@ fun GenreDetailScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainer
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         SelectionActionRow(
@@ -468,6 +467,7 @@ fun GenreDetailScreen(
                 } else {
                      MediumFloatingActionButton(
                         onClick = { showSortSheet = true },
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                         shape = AbsoluteSmoothCornerShape(24.dp, 60)

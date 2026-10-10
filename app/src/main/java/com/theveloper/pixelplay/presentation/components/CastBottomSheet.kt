@@ -479,8 +479,7 @@ private fun CastPermissionStep(
 
         Card(
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerHigh),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerHigh)
         ) {
             Column(
                 modifier = Modifier
@@ -1301,8 +1300,7 @@ private fun ActiveDeviceHero(
         shape = heroShape,
         colors = CardDefaults.cardColors(
             containerColor = if (device.isRemote) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.tertiaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        )
     ) {
         Column(
             modifier = Modifier

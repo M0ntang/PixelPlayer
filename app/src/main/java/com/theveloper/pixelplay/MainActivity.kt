@@ -806,7 +806,7 @@ class MainActivity : ComponentActivity() {
                                 .distinctUntilChanged()
                         }.collectAsStateWithLifecycle(initialValue = null)
                         val showPlayerContentArea = currentSongId != null
-                        val navBarElevation = 3.dp
+                        val navBarElevation = 0.dp
 
                         val animatedNavBarCornerRadius = animateDpAsState(
                             targetValue = navBarCornerRadius.dp,

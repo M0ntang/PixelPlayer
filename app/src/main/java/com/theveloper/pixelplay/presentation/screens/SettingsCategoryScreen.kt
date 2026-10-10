@@ -93,6 +93,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -1998,6 +1999,7 @@ private fun BackupSectionSelectionDialog(
 
                                     ExtendedFloatingActionButton(
                                         onClick = { closeDialog(onConfirm) },
+                                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                                         modifier = Modifier
                                             .padding(end = 6.dp)
                                             .height(48.dp),
@@ -2511,6 +2513,7 @@ private fun ImportFileSelectionDialog(
                                 ) {
                                     ExtendedFloatingActionButton(
                                         onClick = onBrowseFile,
+                                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                                         modifier = Modifier.height(48.dp),
                                         shape = RoundedCornerShape(16.dp),
                                         containerColor = MaterialTheme.colorScheme.primaryContainer,

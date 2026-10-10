@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -556,23 +555,7 @@ fun UnifiedPlayerSheetV2(
     val miniReadyAlpha = sheetThemeState.miniReadyAlpha
     val miniAppearScale = sheetThemeState.miniAppearScale
     val playerAreaBackground = sheetThemeState.playerAreaBackground
-    // Elevation is only visible in the mini/collapsed state (expansion < 0.18).
-    // miniReadyAlpha fades the shadow in during the initial song-appear animation.
     val isDragging = sheetBackAndDragState.isDragging
-    val visualCardShadowElevation by remember(showQueueSheet, miniReadyAlpha, isDragging) {
-        derivedStateOf {
-            if (
-                showQueueSheet ||
-                isDragging ||
-                playerContentExpansionFraction.isRunning ||
-                playerContentExpansionFraction.value > 0.18f
-            ) {
-                0.dp
-            } else {
-                (3f * miniReadyAlpha).dp
-            }
-        }
-    }
 
     val sheetInteractionState = rememberSheetInteractionState(
         scope = scope,
@@ -684,16 +667,6 @@ fun UnifiedPlayerSheetV2(
                                     placeable.placeRelative(startPaddingPx, 0)
                                 }
                             }
-                            // Always apply Modifier.shadow with the dynamic elevation
-                            // (0.dp renders nothing). Keeping the modifier chain
-                            // structurally stable avoids the costly relayout/redraw
-                            // restructure when the elevation crosses 0.dp during
-                            // expand/collapse or right after play/pause.
-                            .shadow(
-                                elevation = visualCardShadowElevation,
-                                shape = sheetInteractionState.playerShadowShape,
-                                clip = false
-                            )
                             .background(
                                 color = playerAreaBackground,
                                 shape = sheetInteractionState.playerShadowShape

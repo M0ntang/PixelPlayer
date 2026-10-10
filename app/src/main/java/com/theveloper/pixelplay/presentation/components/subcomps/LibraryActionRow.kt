@@ -166,7 +166,6 @@ fun LibraryActionRow(
                             containerColor = buttonContainerColor,
                             contentColor = buttonContentColor
                         ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 6.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                         modifier = Modifier.height(genHeight)
                     ) {
@@ -234,10 +233,6 @@ fun LibraryActionRow(
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                ),
-                                elevation = ButtonDefaults.buttonElevation(
-                                    defaultElevation = 4.dp,
-                                    pressedElevation = 6.dp
                                 ),
                                 contentPadding = PaddingValues(
                                     horizontal = 14.dp,

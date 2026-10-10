@@ -111,7 +111,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -2083,8 +2082,7 @@ fun SetupBottomBar(
     )
 
     Surface(
-        modifier = modifier
-            .shadow(elevation = 8.dp, shape = shape, clip = true),
+        modifier = modifier,
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = AbsoluteSmoothCornerShape(
             cornerRadiusTR = 36.dp,
@@ -2170,7 +2168,7 @@ fun SetupBottomBar(
                         cornerRadiusBR = animatedBottomEnd.toInt().dp,
                         smoothnessAsPercentBR = 60,
                     ),
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     containerColor = containerColor,
                     contentColor = contentColor,
                     modifier = Modifier

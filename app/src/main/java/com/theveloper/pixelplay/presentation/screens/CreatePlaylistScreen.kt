@@ -91,7 +91,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
@@ -159,6 +158,7 @@ import com.theveloper.pixelplay.data.model.StorageFilter
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MediumExtendedFloatingActionButton
 import androidx.compose.material3.SliderDefaults
 
@@ -437,6 +437,7 @@ private fun CreatePlaylistContent(
         floatingActionButton = {
             if (!showCropUi && !(currentStep == 1 && creationMode == PlaylistCreationMode.MANUAL)) {
                 MediumExtendedFloatingActionButton(
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     text = {
                         Text(
                             if (currentStep == 0 && creationMode == PlaylistCreationMode.MANUAL) {
@@ -859,6 +860,7 @@ fun EditPlaylistContent(
         floatingActionButton = {
             if (!showCropUi) {
                 MediumExtendedFloatingActionButton(
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     text = { Text(stringResource(R.string.common_save)) },
                     icon = { Icon(Icons.Rounded.Check, contentDescription = null) },
                     onClick = {

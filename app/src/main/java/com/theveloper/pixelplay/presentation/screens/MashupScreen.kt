@@ -168,8 +168,7 @@ private fun DeckUi(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(4.dp)
+        shape = MaterialTheme.shapes.large
     ) {
         Box(contentAlignment = Alignment.Center) {
             Column(modifier = Modifier.padding(12.dp)) {

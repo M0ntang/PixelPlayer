@@ -35,9 +35,9 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledIconButton
@@ -260,9 +260,9 @@ private fun TransitionSummaryCard(
     onEnableOverride: () -> Unit,
     enabled: Boolean
 ) {
-    ElevatedCard(
+    Card(
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         modifier = Modifier.fillMaxWidth()
@@ -702,10 +702,10 @@ private fun CurveSelectionColumn(
     activeColor: Color,
     onActiveColor: Color
 ) {
-    ElevatedCard(
+    Card(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(

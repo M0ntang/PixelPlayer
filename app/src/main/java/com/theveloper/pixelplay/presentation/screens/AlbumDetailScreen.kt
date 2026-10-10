@@ -37,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -602,6 +603,7 @@ private fun SharedAlbumTopBarProbe(
         LargeExtendedFloatingActionButton(
             onClick = onPlayClick,
             shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             modifier = Modifier
                 .align(shuffleAlignment)
                 .statusBarsPadding()
@@ -777,6 +779,7 @@ private fun CollapsingAlbumTopBar(
                 LargeExtendedFloatingActionButton(
                     onClick = onPlayClick,
                     shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp)

@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MediumExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -184,6 +185,7 @@ fun ChangelogBottomSheet(
 
         MediumExtendedFloatingActionButton(
             onClick = { openUrl(context, changelogUrl) },
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             shape = AbsoluteSmoothCornerShape(
                 cornerRadiusBR = fabCornerRadius,
                 smoothnessAsPercentBR = 60,

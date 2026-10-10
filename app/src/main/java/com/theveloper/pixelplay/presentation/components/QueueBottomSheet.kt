@@ -996,7 +996,7 @@ fun QueueBottomSheet(
                         ),
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp)
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.MoreHoriz,
@@ -1136,7 +1136,7 @@ fun QueueBottomSheet(
                     shape = RoundedCornerShape(16.dp),
                     color = colors.inverseSurface,
                     tonalElevation = 6.dp,
-                    shadowElevation = 6.dp
+                    shadowElevation = 0.dp
                 ) {
                     Row(
                         modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
@@ -1240,7 +1240,7 @@ private fun QueueToolbarMenuButton(
         shape = RoundedCornerShape(18.dp),
         color = containerColor,
         tonalElevation = 8.dp,
-        shadowElevation = 8.dp
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -1705,7 +1705,7 @@ fun SaveQueueAsPlaylistSheet(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             tonalElevation = 6.dp,
-                            shadowElevation = 4.dp,
+                            shadowElevation = 0.dp,
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
@@ -2020,7 +2020,7 @@ fun QueuePlaylistSongItem(
             shape = itemShape,
             color = backgroundColor,
             tonalElevation = elevation,
-            shadowElevation = elevation
+            shadowElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 16.dp),

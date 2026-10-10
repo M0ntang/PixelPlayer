@@ -45,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MediumExtendedFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -224,6 +225,7 @@ fun ReorderPresetsSheet(
                     contentWindowInsets = WindowInsets.systemBars,
                     floatingActionButton = {
                         MediumExtendedFloatingActionButton(
+                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                             modifier = Modifier.padding(end = 12.dp),
                             onClick = {
                                 scope.launch {
@@ -276,7 +278,6 @@ fun ReorderPresetsSheet(
                             ) {
                                 items(localItems, key = { it.preset.name }) { item ->
                                     ReorderableItem(reorderableState, key = item.preset.name) { isDragging ->
-                                        val elevation = if (isDragging) 8.dp else 0.dp
                                         val itemShape = AbsoluteSmoothCornerShape(
                                             cornerRadiusTR = 20.dp,
                                             smoothnessAsPercentTL = 60,
@@ -310,7 +311,7 @@ fun ReorderPresetsSheet(
                                                 .fillMaxWidth()
                                                 .clip(itemShape)
                                                 .clickable { togglePin(item) },
-                                            shadowElevation = elevation,
+                                            shadowElevation = 0.dp,
                                             tonalElevation = if (item.isPinned) 1.dp else 0.dp,
                                             color = bgColor,
                                             shape = itemShape

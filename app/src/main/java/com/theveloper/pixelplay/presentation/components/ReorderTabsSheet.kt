@@ -25,6 +25,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MediumExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
@@ -202,7 +203,7 @@ fun ReorderTabsSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(CircleShape),
-                                    shadowElevation = if (isDragging) 4.dp else 0.dp,
+                                    shadowElevation = 0.dp,
                                     color = MaterialTheme.colorScheme.surfaceContainerLowest
                                 ) {
                                     Row(
@@ -278,6 +279,7 @@ fun FloatingToolBar(
             MediumExtendedFloatingActionButton(
                 modifier = Modifier
                     .align(Alignment.CenterVertically),
+                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                 shape = CircleShape,
                 onClick = onClick,
                 icon = { Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.common_done)) },

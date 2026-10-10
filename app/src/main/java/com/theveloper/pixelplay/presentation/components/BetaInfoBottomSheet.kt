@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -399,6 +400,7 @@ fun BetaInfoBottomSheet(modifier: Modifier = Modifier) {
         }
         ExtendedFloatingActionButton(
             onClick = { launchUrl(context, reportUrl) },
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             shape = AbsoluteSmoothCornerShape(
                 cornerRadiusTR = fabCornerRadius,
                 cornerRadiusTL = fabCornerRadius,

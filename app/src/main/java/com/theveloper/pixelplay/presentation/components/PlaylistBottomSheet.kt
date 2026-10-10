@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MediumExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -228,6 +229,7 @@ fun PlaylistBottomSheet(
                     .graphicsLayer {
                         this.alpha = alpha
                     },
+                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                 shape = CircleShape,
                 onClick = {
                     if (!isAnyPlaylistSelected) return@MediumExtendedFloatingActionButton

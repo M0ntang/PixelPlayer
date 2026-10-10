@@ -888,6 +888,7 @@ private fun SharedArtistTopBarProbe(
         LargeExtendedFloatingActionButton(
             onClick = onPlayClick,
             shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             modifier = Modifier
                 .align(shuffleAlignment)
                 .statusBarsPadding()
@@ -1036,7 +1037,8 @@ private fun CustomCollapsingTopBar(
                         SmallFloatingActionButton(
                             onClick = { showImageMenu = true },
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            contentColor = MaterialTheme.colorScheme.onSurface
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
                         ) {
                             Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.artist_cd_edit_image))
                         }
@@ -1110,6 +1112,7 @@ private fun CustomCollapsingTopBar(
                 LargeExtendedFloatingActionButton(
                     onClick = onPlayClick,
                     shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp)

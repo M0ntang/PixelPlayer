@@ -140,7 +140,7 @@ fun ExternalPlayerOverlay(
         ) {
             Surface(
                 tonalElevation = 12.dp,
-                shadowElevation = 20.dp,
+                shadowElevation = 0.dp,
                 shape = sheetShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,

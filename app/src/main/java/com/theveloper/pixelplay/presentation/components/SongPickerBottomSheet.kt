@@ -45,6 +45,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -248,6 +249,7 @@ fun SongPickerContent(
                 ) {
                     LargeExtendedFloatingActionButton(
                         onClick = { onConfirm(selectedSongIds.filterValues { it }.keys) },
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                         modifier = Modifier.align(Alignment.CenterEnd),
                         shape = RoundedCornerShape(20.dp),
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,

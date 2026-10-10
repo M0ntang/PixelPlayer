@@ -773,7 +773,7 @@ fun BrickBreakerOverlay(
                             .padding(bottom = 100.dp),
                         color = colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
                         shape = CircleShape,
-                        shadowElevation = 4.dp,
+                        shadowElevation = 0.dp,
                     ) {
                         Text(
                             text = stringResource(R.string.brick_tap_relaunch),

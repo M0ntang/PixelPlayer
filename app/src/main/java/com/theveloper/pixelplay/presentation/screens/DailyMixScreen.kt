@@ -34,6 +34,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -573,6 +574,7 @@ private fun ExpressiveDailyMixHeader(
             LargeExtendedFloatingActionButton(
                 modifier = Modifier,
                 onClick = onShowMenu,
+                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                 shape = RoundedStarShape(
                     sides = 8,
                     curve = 0.05,
