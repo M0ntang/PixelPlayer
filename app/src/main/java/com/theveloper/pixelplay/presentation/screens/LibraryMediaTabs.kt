@@ -100,6 +100,8 @@ fun LibraryAlbumsTab(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
 
+    val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
+
     val gridState = rememberLazyGridState()
     val listState = rememberLazyListState()
     val dummyListState = rememberLazyListState()
@@ -264,7 +266,8 @@ fun LibraryAlbumsTab(
                             album = Album.empty(),
                             albumColorSchemePairFlow = MutableStateFlow<ColorSchemePair?>(null),
                             onClick = {},
-                            isLoading = true
+                            isLoading = true,
+                            headerCoverStyle = headerCoverStyle
                         )
                     }
                 }
@@ -291,7 +294,8 @@ fun LibraryAlbumsTab(
                             album = Album.empty(),
                             albumColorSchemePairFlow = MutableStateFlow<ColorSchemePair?>(null),
                             onClick = {},
-                            isLoading = true
+                            isLoading = true,
+                            headerCoverStyle = headerCoverStyle
                         )
                     }
                 }
@@ -367,14 +371,16 @@ fun LibraryAlbumsTab(
                                             isSelected = selectedAlbumIds.contains(album.id),
                                             selectionIndex = getSelectionIndex(album.id),
                                             onLongPress = rememberedOnLongPress,
-                                            onSelectionToggle = rememberedOnSelectionToggle
+                                            onSelectionToggle = rememberedOnSelectionToggle,
+                                            headerCoverStyle = headerCoverStyle
                                         )
                                     } else {
                                         AlbumListItem(
                                             album = Album.empty(),
                                             albumColorSchemePairFlow = MutableStateFlow<ColorSchemePair?>(null),
                                             onClick = {},
-                                            isLoading = true
+                                            isLoading = true,
+                                            headerCoverStyle = headerCoverStyle
                                         )
                                     }
                                 }
@@ -437,14 +443,16 @@ fun LibraryAlbumsTab(
                                             isSelected = selectedAlbumIds.contains(album.id),
                                             selectionIndex = getSelectionIndex(album.id),
                                             onLongPress = rememberedOnLongPress,
-                                            onSelectionToggle = rememberedOnSelectionToggle
+                                            onSelectionToggle = rememberedOnSelectionToggle,
+                                            headerCoverStyle = headerCoverStyle
                                         )
                                     } else {
                                         AlbumGridItemRedesigned(
                                             album = Album.empty(),
                                             albumColorSchemePairFlow = MutableStateFlow<ColorSchemePair?>(null),
                                             onClick = {},
-                                            isLoading = true
+                                            isLoading = true,
+                                            headerCoverStyle = headerCoverStyle
                                         )
                                     }
                                 }

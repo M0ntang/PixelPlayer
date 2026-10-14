@@ -198,8 +198,8 @@
     <string name="settings_carousel_style_subtitle">Выберите внешний вид карусели альбомов.</string>
     <string name="settings_carousel_no_peek">Без предпросмотра</string>
     <string name="settings_carousel_one_peek">Один предпросмотр</string>
-    <string name="settings_header_cover_style_title">Стиль обложки в шапке</string>
-    <string name="settings_header_cover_style_subtitle">Отображение обложки в заголовках альбомов и исполнителей.</string>
+    <string name="settings_header_cover_style_title">Вид обложек</string>
+    <string name="settings_header_cover_style_subtitle">Отображение обложек в сетке библиотеки и в заголовках альбомов/исполнителей.</string>
     <string name="settings_header_cover_style_banner">Баннер</string>
     <string name="settings_header_cover_style_square">Квадрат 1:1</string>
     <string name="settings_home_collage_section">Коллаж на главной</string>

@@ -232,7 +232,7 @@ fun AlbumDetailScreen(
                     )
                 }
 
-                val topBarHeight = remember { Animatable(maxTopBarHeightPx) }
+                val topBarHeight = remember(maxTopBarHeightPx) { Animatable(maxTopBarHeightPx) }
                 LaunchedEffect(maxTopBarHeightPx) {
                     if (topBarHeight.value > minTopBarHeightPx) {
                         topBarHeight.snapTo(maxTopBarHeightPx)
@@ -247,7 +247,7 @@ fun AlbumDetailScreen(
                     }
                 }
 
-                val nestedScrollConnection = remember {
+                val nestedScrollConnection = remember(minTopBarHeightPx, maxTopBarHeightPx) {
                     object : NestedScrollConnection {
                         override fun onPreScroll(
                             available: Offset,
@@ -627,7 +627,7 @@ private fun SharedAlbumTopBarProbe(
     ) {
         if (isSquareMode) {
             if (expandedContentAlpha > 0.01f) {
-                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(190.dp, 220.dp)
+                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 100.dp).coerceIn(200.dp, 260.dp)
                 val squareScale = 1f - (collapseFraction * 0.25f)
                 val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
 
@@ -854,7 +854,7 @@ private fun CollapsingAlbumTopBar(
         ) {
             if (isSquareMode) {
                 if (showExpandedArtwork) {
-                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(190.dp, 220.dp)
+                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 100.dp).coerceIn(200.dp, 260.dp)
                     val squareScale = 1f - (collapseFraction * 0.25f)
                     val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
 

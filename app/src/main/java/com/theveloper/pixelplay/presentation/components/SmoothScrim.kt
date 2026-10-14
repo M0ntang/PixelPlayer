@@ -12,40 +12,35 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 
 /**
- * Color stops representing a wide, gentle, smootherstep easing from 0% alpha to 100% solid [surfaceColor].
- * Uses C^2 continuous quintic smootherstep S(t) = 6t^5 - 15t^4 + 10t^3 with zero 1st and 2nd derivatives
- * at both boundaries, eliminating Mach bands, gradient cutoff lines, and color banding.
- * Reaches 100% solid [surfaceColor] at 88%, and stays 100% solid from 88% to 100%.
+ * Color stops representing a gentle, smootherstep easing from 0% alpha to 100% solid [surfaceColor].
+ * Starts lower down at 38% height so the majority of the artwork remains clear and vibrant,
+ * while reaching sufficient opacity (~50-85%) where album title and subtitle are located,
+ * and finishing 100% solid from 86% to 100% to seamlessly merge with the track list.
  */
 fun getHeaderScrimStops(surfaceColor: Color): Array<Pair<Float, Color>> {
     return arrayOf(
         0.000f to surfaceColor.copy(alpha = 0.0000f),
-        0.050f to surfaceColor.copy(alpha = 0.0000f),
-        0.083f to surfaceColor.copy(alpha = 0.0006f),
-        0.116f to surfaceColor.copy(alpha = 0.0045f),
-        0.150f to surfaceColor.copy(alpha = 0.0143f),
-        0.183f to surfaceColor.copy(alpha = 0.0318f),
-        0.216f to surfaceColor.copy(alpha = 0.0579f),
-        0.249f to surfaceColor.copy(alpha = 0.0933f),
-        0.282f to surfaceColor.copy(alpha = 0.1376f),
-        0.316f to surfaceColor.copy(alpha = 0.1905f),
-        0.349f to surfaceColor.copy(alpha = 0.2509f),
-        0.382f to surfaceColor.copy(alpha = 0.3174f),
-        0.415f to surfaceColor.copy(alpha = 0.3886f),
-        0.448f to surfaceColor.copy(alpha = 0.4625f),
-        0.482f to surfaceColor.copy(alpha = 0.5375f),
-        0.515f to surfaceColor.copy(alpha = 0.6114f),
-        0.548f to surfaceColor.copy(alpha = 0.6826f),
-        0.581f to surfaceColor.copy(alpha = 0.7491f),
-        0.614f to surfaceColor.copy(alpha = 0.8095f),
-        0.648f to surfaceColor.copy(alpha = 0.8624f),
-        0.681f to surfaceColor.copy(alpha = 0.9067f),
-        0.714f to surfaceColor.copy(alpha = 0.9421f),
-        0.747f to surfaceColor.copy(alpha = 0.9682f),
-        0.780f to surfaceColor.copy(alpha = 0.9857f),
-        0.814f to surfaceColor.copy(alpha = 0.9955f),
-        0.847f to surfaceColor.copy(alpha = 0.9994f),
-        0.880f to surfaceColor,
+        0.380f to surfaceColor.copy(alpha = 0.0000f),
+        0.404f to surfaceColor.copy(alpha = 0.0012f),
+        0.428f to surfaceColor.copy(alpha = 0.0086f),
+        0.452f to surfaceColor.copy(alpha = 0.0266f),
+        0.476f to surfaceColor.copy(alpha = 0.0579f),
+        0.500f to surfaceColor.copy(alpha = 0.1035f),
+        0.524f to surfaceColor.copy(alpha = 0.1631f),
+        0.548f to surfaceColor.copy(alpha = 0.2352f),
+        0.572f to surfaceColor.copy(alpha = 0.3174f),
+        0.596f to surfaceColor.copy(alpha = 0.4069f),
+        0.620f to surfaceColor.copy(alpha = 0.5000f),
+        0.644f to surfaceColor.copy(alpha = 0.5931f),
+        0.668f to surfaceColor.copy(alpha = 0.6826f),
+        0.692f to surfaceColor.copy(alpha = 0.7648f),
+        0.716f to surfaceColor.copy(alpha = 0.8369f),
+        0.740f to surfaceColor.copy(alpha = 0.8965f),
+        0.764f to surfaceColor.copy(alpha = 0.9421f),
+        0.788f to surfaceColor.copy(alpha = 0.9734f),
+        0.812f to surfaceColor.copy(alpha = 0.9914f),
+        0.836f to surfaceColor.copy(alpha = 0.9988f),
+        0.860f to surfaceColor,
         1.000f to surfaceColor
     )
 }
@@ -87,39 +82,34 @@ fun Modifier.ditheredHeaderScrim(surfaceColor: Color): Modifier = this.drawWithC
 
 /**
  * Color stops for card scrim overlay (e.g. in grid items).
- * Upper 15% is left completely transparent for artwork clarity.
- * Fades smoothly into [containerColor] from 15% to 92% using quintic smootherstep,
- * then stays solid 100% from 92% to 100% to seamlessly merge with the card body.
+ * Upper 50% is left completely transparent so the artwork is fully visible.
+ * Fades smoothly into [containerColor] from 50% to 90% using quintic smootherstep,
+ * then stays solid 100% from 90% to 100% to seamlessly merge with the card body.
  */
 fun getCardScrimStops(containerColor: Color): Array<Pair<Float, Color>> {
     return arrayOf(
         0.000f to containerColor.copy(alpha = 0.0000f),
-        0.150f to containerColor.copy(alpha = 0.0000f),
-        0.181f to containerColor.copy(alpha = 0.0006f),
-        0.212f to containerColor.copy(alpha = 0.0045f),
-        0.242f to containerColor.copy(alpha = 0.0143f),
-        0.273f to containerColor.copy(alpha = 0.0318f),
-        0.304f to containerColor.copy(alpha = 0.0579f),
-        0.335f to containerColor.copy(alpha = 0.0933f),
-        0.366f to containerColor.copy(alpha = 0.1376f),
-        0.396f to containerColor.copy(alpha = 0.1905f),
-        0.427f to containerColor.copy(alpha = 0.2509f),
-        0.458f to containerColor.copy(alpha = 0.3174f),
-        0.489f to containerColor.copy(alpha = 0.3886f),
-        0.520f to containerColor.copy(alpha = 0.4625f),
-        0.550f to containerColor.copy(alpha = 0.5375f),
-        0.581f to containerColor.copy(alpha = 0.6114f),
-        0.612f to containerColor.copy(alpha = 0.6826f),
-        0.643f to containerColor.copy(alpha = 0.7491f),
-        0.674f to containerColor.copy(alpha = 0.8095f),
-        0.704f to containerColor.copy(alpha = 0.8624f),
-        0.735f to containerColor.copy(alpha = 0.9067f),
-        0.766f to containerColor.copy(alpha = 0.9421f),
-        0.797f to containerColor.copy(alpha = 0.9682f),
-        0.828f to containerColor.copy(alpha = 0.9857f),
-        0.858f to containerColor.copy(alpha = 0.9955f),
-        0.889f to containerColor.copy(alpha = 0.9994f),
-        0.920f to containerColor,
+        0.500f to containerColor.copy(alpha = 0.0000f),
+        0.520f to containerColor.copy(alpha = 0.0012f),
+        0.540f to containerColor.copy(alpha = 0.0086f),
+        0.560f to containerColor.copy(alpha = 0.0266f),
+        0.580f to containerColor.copy(alpha = 0.0579f),
+        0.600f to containerColor.copy(alpha = 0.1035f),
+        0.620f to containerColor.copy(alpha = 0.1631f),
+        0.640f to containerColor.copy(alpha = 0.2352f),
+        0.660f to containerColor.copy(alpha = 0.3174f),
+        0.680f to containerColor.copy(alpha = 0.4069f),
+        0.700f to containerColor.copy(alpha = 0.5000f),
+        0.720f to containerColor.copy(alpha = 0.5931f),
+        0.740f to containerColor.copy(alpha = 0.6826f),
+        0.760f to containerColor.copy(alpha = 0.7648f),
+        0.780f to containerColor.copy(alpha = 0.8369f),
+        0.800f to containerColor.copy(alpha = 0.8965f),
+        0.820f to containerColor.copy(alpha = 0.9421f),
+        0.840f to containerColor.copy(alpha = 0.9734f),
+        0.860f to containerColor.copy(alpha = 0.9914f),
+        0.880f to containerColor.copy(alpha = 0.9988f),
+        0.900f to containerColor,
         1.000f to containerColor
     )
 }
@@ -152,38 +142,33 @@ fun Modifier.ditheredCardScrim(containerColor: Color): Modifier = this.drawWithC
 
 /**
  * Color stops for horizontal card scrim overlay (e.g. in list items).
- * Fades smoothly into [containerColor] from 20% to 95% using quintic smootherstep,
- * then stays solid 100% to blend into the adjacent text column.
+ * Fades smoothly into [containerColor] from 50% to 92% using quintic smootherstep,
+ * leaving the left half completely clean and vibrant, then stays solid 100% to blend into the adjacent text column.
  */
 fun getHorizontalCardScrimStops(containerColor: Color): Array<Pair<Float, Color>> {
     return arrayOf(
         0.000f to containerColor.copy(alpha = 0.0000f),
-        0.200f to containerColor.copy(alpha = 0.0000f),
-        0.230f to containerColor.copy(alpha = 0.0006f),
-        0.260f to containerColor.copy(alpha = 0.0045f),
-        0.290f to containerColor.copy(alpha = 0.0143f),
-        0.320f to containerColor.copy(alpha = 0.0318f),
-        0.350f to containerColor.copy(alpha = 0.0579f),
-        0.380f to containerColor.copy(alpha = 0.0933f),
-        0.410f to containerColor.copy(alpha = 0.1376f),
-        0.440f to containerColor.copy(alpha = 0.1905f),
-        0.470f to containerColor.copy(alpha = 0.2509f),
-        0.500f to containerColor.copy(alpha = 0.3174f),
-        0.530f to containerColor.copy(alpha = 0.3886f),
-        0.560f to containerColor.copy(alpha = 0.4625f),
-        0.590f to containerColor.copy(alpha = 0.5375f),
-        0.620f to containerColor.copy(alpha = 0.6114f),
-        0.650f to containerColor.copy(alpha = 0.6826f),
-        0.680f to containerColor.copy(alpha = 0.7491f),
-        0.710f to containerColor.copy(alpha = 0.8095f),
-        0.740f to containerColor.copy(alpha = 0.8624f),
-        0.770f to containerColor.copy(alpha = 0.9067f),
-        0.800f to containerColor.copy(alpha = 0.9421f),
-        0.830f to containerColor.copy(alpha = 0.9682f),
-        0.860f to containerColor.copy(alpha = 0.9857f),
-        0.890f to containerColor.copy(alpha = 0.9955f),
-        0.920f to containerColor.copy(alpha = 0.9994f),
-        0.950f to containerColor,
+        0.500f to containerColor.copy(alpha = 0.0000f),
+        0.521f to containerColor.copy(alpha = 0.0012f),
+        0.542f to containerColor.copy(alpha = 0.0086f),
+        0.563f to containerColor.copy(alpha = 0.0266f),
+        0.584f to containerColor.copy(alpha = 0.0579f),
+        0.605f to containerColor.copy(alpha = 0.1035f),
+        0.626f to containerColor.copy(alpha = 0.1631f),
+        0.647f to containerColor.copy(alpha = 0.2352f),
+        0.668f to containerColor.copy(alpha = 0.3174f),
+        0.689f to containerColor.copy(alpha = 0.4069f),
+        0.710f to containerColor.copy(alpha = 0.5000f),
+        0.731f to containerColor.copy(alpha = 0.5931f),
+        0.752f to containerColor.copy(alpha = 0.6826f),
+        0.773f to containerColor.copy(alpha = 0.7648f),
+        0.794f to containerColor.copy(alpha = 0.8369f),
+        0.815f to containerColor.copy(alpha = 0.8965f),
+        0.836f to containerColor.copy(alpha = 0.9421f),
+        0.857f to containerColor.copy(alpha = 0.9734f),
+        0.878f to containerColor.copy(alpha = 0.9914f),
+        0.899f to containerColor.copy(alpha = 0.9988f),
+        0.920f to containerColor,
         1.000f to containerColor
     )
 }

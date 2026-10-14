@@ -3405,7 +3405,7 @@ fun AlbumGridItemRedesigned(
                             allowHardware = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(3f / 2f),
+                                .aspectRatio(if (isSquareMode) 1f else 3f / 2f),
                             onState = { state ->
                                 isLoadingImage = state is AsyncImagePainter.State.Loading
                             }
@@ -3415,11 +3415,13 @@ fun AlbumGridItemRedesigned(
                                 modifier = Modifier.matchParentSize()
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .ditheredCardScrim(gradientBaseColor)
-                        )
+                        if (!isSquareMode) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .ditheredCardScrim(gradientBaseColor)
+                            )
+                        }
                     }
                     Column(
                         modifier = Modifier
@@ -3548,8 +3550,10 @@ fun AlbumListItem(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER
 ) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayDarkTheme.current
     val currentMaterialColorScheme = MaterialTheme.colorScheme
@@ -3669,11 +3673,13 @@ fun AlbumListItem(
                         }
 
                         // Gradient Overlay
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .ditheredHorizontalCardScrim(gradientBaseColor)
-                        )
+                        if (!isSquareMode) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .ditheredHorizontalCardScrim(gradientBaseColor)
+                            )
+                        }
                     }
 
                     // MIDDLE: Solid Background
