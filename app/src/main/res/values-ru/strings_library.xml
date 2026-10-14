@@ -332,6 +332,21 @@
     <string name="batch_edit_remove_all_art">Удалить все обложки</string>
     <string name="batch_edit_multiple_covers">(Несколько разных обложек)</string>
 
+    <!-- EditAlbumSheet -->
+    <string name="edit_album_title">Редактировать альбом</string>
+    <string name="edit_album_toolbar_title">Редактировать альбом</string>
+    <string name="edit_album_dialog_title">Редактирование метаданных альбома</string>
+    <string name="edit_album_dialog_body">Редактирование метаданных альбома обновит все треки в этом альбоме. Вы также можете менять порядок треков и разделять альбом на диски.</string>
+    <string name="edit_album_tracks_header">Треки и диски</string>
+    <string name="edit_album_add_disc">Добавить диск</string>
+    <string name="edit_album_disc_header">Диск %1$d</string>
+    <string name="edit_album_move_to_disc">Переместить на Диск %1$d</string>
+    <string name="edit_album_delete_disc">Удалить пустой диск</string>
+    <string name="edit_album_empty_disc">На этом диске пока нет треков. Переместите треки сюда кнопкой диска или перетащите их.</string>
+    <string name="edit_album_field_artist_hint">Оставьте пустым, чтобы сохранить исполнителей треков</string>
+    <string name="edit_album_success">Альбом успешно обновлен</string>
+    <string name="edit_album_failed">Не удалось обновить альбом</string>
+
     <!-- Playlist dismissed message -->
     <string name="playlist_dismissed_message">Плейлист скрыт</string>
 

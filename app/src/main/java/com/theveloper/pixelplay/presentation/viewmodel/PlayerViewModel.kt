@@ -2850,6 +2850,29 @@ class PlayerViewModel @Inject constructor(
         metadataEditCallbacks()
     )
 
+    fun saveAlbumMetadata(
+        album: Album,
+        trackEdits: List<AlbumTrackEditItem>,
+        newAlbumTitle: String,
+        newAlbumArtist: String?,
+        newArtist: String?,
+        newGenre: String?,
+        newReplayGainAlbumGainDb: String?,
+        coverArtUpdate: CoverArtUpdate?
+    ) {
+        metadataEditStateHolder.saveAlbumMetadata(
+            album,
+            trackEdits,
+            newAlbumTitle,
+            newAlbumArtist,
+            newArtist,
+            newGenre,
+            newReplayGainAlbumGainDb,
+            coverArtUpdate,
+            metadataEditCallbacks()
+        )
+    }
+
     fun editSongMetadata(
         song: Song,
         newTitle: String,

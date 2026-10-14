@@ -332,6 +332,21 @@
     <string name="batch_edit_remove_all_art">Remove All Cover Art</string>
     <string name="batch_edit_multiple_covers">(Multiple different covers)</string>
 
+    <!-- EditAlbumSheet -->
+    <string name="edit_album_title">Edit album</string>
+    <string name="edit_album_toolbar_title">Edit album</string>
+    <string name="edit_album_dialog_title">Editing album metadata</string>
+    <string name="edit_album_dialog_body">Editing album metadata updates all songs in this album. You can also reorder tracks and divide the album into discs.</string>
+    <string name="edit_album_tracks_header">Tracks &amp; Discs</string>
+    <string name="edit_album_add_disc">Add disc</string>
+    <string name="edit_album_disc_header">Disc %1$d</string>
+    <string name="edit_album_move_to_disc">Move to Disc %1$d</string>
+    <string name="edit_album_delete_disc">Delete empty disc</string>
+    <string name="edit_album_empty_disc">No tracks on this disc yet. Move tracks here using the disc button or drag them.</string>
+    <string name="edit_album_field_artist_hint">Leave empty to keep individual track artists</string>
+    <string name="edit_album_success">Album updated successfully</string>
+    <string name="edit_album_failed">Failed to update album</string>
+
     <!-- Playlist dismissed message -->
     <string name="playlist_dismissed_message">Playlist dismissed</string>
 

@@ -12,6 +12,8 @@ import com.theveloper.pixelplay.data.media.CoverArtUpdate
 import com.theveloper.pixelplay.data.media.ImageCacheManager
 import com.theveloper.pixelplay.data.media.MetadataEditError
 import com.theveloper.pixelplay.data.media.SongMetadataEditor
+import com.theveloper.pixelplay.data.database.MusicDao
+import com.theveloper.pixelplay.data.model.Album
 import com.theveloper.pixelplay.data.model.Lyrics
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.repository.MusicRepository
@@ -48,6 +50,12 @@ class MetadataEditCallbacks(
     val reloadLyricsForCurrentSong: () -> Unit,
 )
 
+data class AlbumTrackEditItem(
+    val song: Song,
+    val trackNumber: Int,
+    val discNumber: Int
+)
+
 private data class PendingMetadataEdit(
     val song: Song,
     val title: String,
@@ -60,6 +68,17 @@ private data class PendingMetadataEdit(
     val trackNumber: Int,
     val discNumber: Int?,
     val replayGainTrackGainDb: String?,
+    val replayGainAlbumGainDb: String?,
+    val coverArtUpdate: CoverArtUpdate?
+)
+
+private data class PendingAlbumMetadataEdit(
+    val album: Album,
+    val trackEdits: List<AlbumTrackEditItem>,
+    val albumTitle: String,
+    val albumArtist: String?,
+    val artist: String?,
+    val genre: String?,
     val replayGainAlbumGainDb: String?,
     val coverArtUpdate: CoverArtUpdate?
 )
@@ -89,6 +108,7 @@ private data class PendingLyricsSave(
 class MetadataEditStateHolder @Inject constructor(
     private val songMetadataEditor: SongMetadataEditor,
     private val musicRepository: MusicRepository,
+    private val musicDao: MusicDao,
     private val imageCacheManager: ImageCacheManager,
     private val themeStateHolder: ThemeStateHolder,
     private val playbackStateHolder: PlaybackStateHolder,
@@ -108,6 +128,7 @@ class MetadataEditStateHolder @Inject constructor(
 
     // Edits parked while waiting for the user's MediaStore write-permission decision.
     private var pendingMetadataEdit: PendingMetadataEdit? = null
+    private var pendingAlbumMetadataEdit: PendingAlbumMetadataEdit? = null
     private var pendingBatchMetadataEdit: PendingBatchMetadataEdit? = null
     private var pendingLyricsSave: PendingLyricsSave? = null
     private var pendingBatchGenreEdit: Pair<List<Song>, String>? = null
@@ -449,6 +470,67 @@ class MetadataEditStateHolder @Inject constructor(
         }
     }
 
+    fun saveAlbumMetadata(
+        album: Album,
+        trackEdits: List<AlbumTrackEditItem>,
+        newAlbumTitle: String,
+        newAlbumArtist: String?,
+        newArtist: String?,
+        newGenre: String?,
+        newReplayGainAlbumGainDb: String?,
+        coverArtUpdate: CoverArtUpdate?,
+        cb: MetadataEditCallbacks,
+    ) {
+        cb.scope.launch {
+            val localSongsNeedingPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                trackEdits.mapNotNull { item ->
+                    item.song.id.toLongOrNull()?.takeIf { it > 0 }?.let { item.song to it }
+                }
+            } else {
+                emptyList()
+            }
+
+            if (localSongsNeedingPermission.isNotEmpty()) {
+                val uris = localSongsNeedingPermission.mapNotNull { (_, songId) ->
+                    android.provider.MediaStore.Audio.Media.getContentUri(
+                        android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY,
+                        songId
+                    )
+                }
+
+                if (uris.isNotEmpty()) {
+                    val intentSender = MediaStorePermissionHelper.createWriteRequestIntentSender(context, uris)
+                    if (intentSender != null) {
+                        pendingAlbumMetadataEdit = PendingAlbumMetadataEdit(
+                            album = album,
+                            trackEdits = trackEdits,
+                            albumTitle = newAlbumTitle,
+                            albumArtist = newAlbumArtist,
+                            artist = newArtist,
+                            genre = newGenre,
+                            replayGainAlbumGainDb = newReplayGainAlbumGainDb,
+                            coverArtUpdate = coverArtUpdate
+                        )
+                        _writePermissionRequest.emit(intentSender)
+                        return@launch
+                    }
+                }
+            }
+
+            performAlbumMetadataEdit(
+                album = album,
+                trackEdits = trackEdits,
+                albumTitle = newAlbumTitle,
+                albumArtist = newAlbumArtist,
+                artist = newArtist,
+                genre = newGenre,
+                replayGainAlbumGainDb = newReplayGainAlbumGainDb,
+                coverArtUpdate = coverArtUpdate,
+                cb = cb
+            )
+        }
+    }
+
     fun batchEditGenre(songs: List<Song>, newGenre: String, cb: MetadataEditCallbacks) {
         if (songs.isEmpty()) return
 
@@ -502,6 +584,30 @@ class MetadataEditStateHolder @Inject constructor(
 
     /** Called from the UI after the user approves or denies the MediaStore write permission. */
     fun onWritePermissionResult(granted: Boolean, cb: MetadataEditCallbacks) {
+        // Handle album metadata edit
+        val albumMetadata = pendingAlbumMetadataEdit
+        if (albumMetadata != null) {
+            pendingAlbumMetadataEdit = null
+            if (!granted) {
+                cb.sendToast(context.getString(R.string.metadata_edit_permission_denied_edit_files))
+                return
+            }
+            cb.scope.launch {
+                performAlbumMetadataEdit(
+                    album = albumMetadata.album,
+                    trackEdits = albumMetadata.trackEdits,
+                    albumTitle = albumMetadata.albumTitle,
+                    albumArtist = albumMetadata.albumArtist,
+                    artist = albumMetadata.artist,
+                    genre = albumMetadata.genre,
+                    replayGainAlbumGainDb = albumMetadata.replayGainAlbumGainDb,
+                    coverArtUpdate = albumMetadata.coverArtUpdate,
+                    cb = cb
+                )
+            }
+            return
+        }
+
         // Handle batch metadata edit
         val batchMetadata = pendingBatchMetadataEdit
         if (batchMetadata != null) {
@@ -881,6 +987,147 @@ class MetadataEditStateHolder @Inject constructor(
         } else {
             cb.sendToast(context.getString(R.string.metadata_edit_batch_genre_updated_partial, successCount, failCount))
         }
+    }
+
+    private suspend fun performAlbumMetadataEdit(
+        album: Album,
+        trackEdits: List<AlbumTrackEditItem>,
+        albumTitle: String,
+        albumArtist: String?,
+        artist: String?,
+        genre: String?,
+        replayGainAlbumGainDb: String?,
+        coverArtUpdate: CoverArtUpdate?,
+        cb: MetadataEditCallbacks,
+    ) {
+        var successCount = 0
+        var failureCount = 0
+        val previousAlbumArts = mutableSetOf<String?>()
+        var latestUpdatedAlbumArtUri: String? = null
+
+        trackEdits.forEach { item ->
+            val song = item.song
+            previousAlbumArts.add(song.albumArtUriString)
+
+            val sourceSong = if (song.lyrics != null) {
+                song
+            } else {
+                withContext(Dispatchers.IO) {
+                    musicRepository.getSong(song.id).first()
+                } ?: song
+            }
+
+            val result = saveMetadata(
+                song = sourceSong,
+                newTitle = sourceSong.title,
+                newArtist = if (!artist.isNullOrBlank()) artist else sourceSong.displayArtist,
+                newAlbum = albumTitle.takeIf { it.isNotBlank() } ?: sourceSong.album,
+                newAlbumArtist = albumArtist ?: (sourceSong.albumArtist ?: ""),
+                newComposer = "",
+                newGenre = genre ?: (sourceSong.genre ?: ""),
+                newLyrics = sourceSong.lyrics ?: "",
+                newTrackNumber = item.trackNumber,
+                newDiscNumber = item.discNumber,
+                newReplayGainTrackGainDb = null,
+                newReplayGainAlbumGainDb = replayGainAlbumGainDb,
+                coverArtUpdate = coverArtUpdate
+            )
+
+            if (result.success && result.updatedSong != null) {
+                successCount++
+                val updatedSong = result.updatedSong
+                val refreshedAlbumArtUri = result.updatedAlbumArtUri
+                if (refreshedAlbumArtUri != null) {
+                    latestUpdatedAlbumArtUri = refreshedAlbumArtUri
+                }
+
+                invalidateCoverArtCaches(song.albumArtUriString, refreshedAlbumArtUri)
+
+                cb.updateUiState { state ->
+                    val updatedQueue = state.currentPlaybackQueue.replaceSong(updatedSong)
+                    if (updatedQueue === state.currentPlaybackQueue) {
+                        state
+                    } else {
+                        state.copy(currentPlaybackQueue = updatedQueue)
+                    }
+                }
+
+                libraryStateHolder.updateSong(updatedSong)
+
+                if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
+                    playbackStateHolder.updateStablePlayerState {
+                        it.copy(
+                            currentSong = updatedSong,
+                            lyrics = result.parsedLyrics
+                        )
+                    }
+
+                    val controller = playbackStateHolder.mediaController
+                    if (controller != null) {
+                        val currentIndex = controller.currentMediaItemIndex
+                        if (currentIndex >= 0 && currentIndex < controller.mediaItemCount) {
+                            val currentPosition = controller.currentPosition
+                            val newMediaItem = MediaItemBuilder.build(updatedSong)
+                            controller.replaceMediaItem(currentIndex, newMediaItem)
+                            controller.seekTo(currentIndex, currentPosition)
+                        }
+                    }
+                }
+
+                if (cb.getSelectedSongForInfo()?.id == song.id) {
+                    cb.setSelectedSongForInfo(updatedSong)
+                }
+            } else {
+                failureCount++
+                Timber.e("Failed to update track in album edit: ${song.title}")
+            }
+        }
+
+        if (coverArtUpdate != null) {
+            previousAlbumArts.forEach { previousArt ->
+                purgeAlbumArtThemes(previousArt, null)
+            }
+            val currentSongId = playbackStateHolder.stablePlayerState.value.currentSong?.id
+            if (currentSongId != null && trackEdits.any { it.song.id == currentSongId }) {
+                val currentSong = playbackStateHolder.stablePlayerState.value.currentSong
+                val paletteTargetUri = currentSong?.albumArtUriString
+                if (paletteTargetUri != null) {
+                    themeStateHolder.getAlbumColorSchemeFlow(paletteTargetUri)
+                    themeStateHolder.extractAndGenerateColorScheme(
+                        paletteTargetUri.toUri(),
+                        paletteTargetUri,
+                        isPreload = false
+                    )
+                } else {
+                    themeStateHolder.extractAndGenerateColorScheme(null, null, isPreload = false)
+                }
+            }
+        }
+
+        try {
+            val effectiveAlbumArt = if (coverArtUpdate?.isDeletion == true) {
+                null
+            } else {
+                latestUpdatedAlbumArtUri ?: album.albumArtUriString
+            }
+            val effectiveArtistName = if (!artist.isNullOrBlank()) artist else album.artist
+            musicDao.updateAlbumDetails(
+                albumId = album.id,
+                title = albumTitle.takeIf { it.isNotBlank() } ?: album.title,
+                artistName = effectiveArtistName,
+                albumArtist = albumArtist ?: album.albumArtist,
+                albumArtUri = effectiveAlbumArt
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to update album entity directly")
+        }
+
+        val toastMessage = when {
+            failureCount == 0 -> context.getString(R.string.edit_album_success)
+            successCount == 0 -> context.getString(R.string.edit_album_failed)
+            else -> context.getString(R.string.batch_edit_partial_success, successCount, trackEdits.size)
+        }
+        cb.sendToast(toastMessage)
     }
 
     private fun invalidateCoverArtCaches(vararg uriStrings: String?) {
