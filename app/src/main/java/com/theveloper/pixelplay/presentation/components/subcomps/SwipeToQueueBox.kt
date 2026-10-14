@@ -1,8 +1,10 @@
 package com.theveloper.pixelplay.presentation.components.subcomps
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -13,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,12 +42,9 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
 
-val SpotifyGreen = Color(0xFF1ED760)
-val SpotifyIconDark = Color(0xFF0F1711)
-
 /**
- * Spotify-style swipeable container that reveals a green "Add to Queue" action
- * with an icon and haptic feedback when swiped horizontally.
+ * Swipeable container that reveals an "Add to Queue" action with dynamic colors
+ * matching the album cover theme, with an icon and haptic feedback when swiped horizontally.
  * Supports both rightward and leftward swipes.
  */
 @Composable
@@ -53,6 +53,10 @@ fun SwipeToQueueBox(
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(22.dp),
     threshold: Dp = 72.dp,
+    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    activatedContainerColor: Color = MaterialTheme.colorScheme.primary,
+    activatedContentColor: Color = MaterialTheme.colorScheme.onPrimary,
     onSwipeToQueue: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -72,7 +76,7 @@ fun SwipeToQueueBox(
     ) {
         val currentOffset = offsetAnimatable.value
 
-        // Background action indicator (Spotify-style green action box)
+        // Background action indicator (album palette matched action box)
         if (abs(currentOffset) > 0.5f) {
             val isSwipingRight = currentOffset > 0f
             val alignment = if (isSwipingRight) Alignment.CenterStart else Alignment.CenterEnd
@@ -81,15 +85,26 @@ fun SwipeToQueueBox(
             val iconScale = if (isActivated) 1.15f else 0.7f + (0.3f * progress)
             val iconAlpha = (progress * 1.5f).coerceIn(0f, 1f)
 
+            val actionBgColor by animateColorAsState(
+                targetValue = if (isActivated) activatedContainerColor else containerColor,
+                animationSpec = tween(durationMillis = 150),
+                label = "swipeActionBgColor"
+            )
+            val actionFgColor by animateColorAsState(
+                targetValue = if (isActivated) activatedContentColor else contentColor,
+                animationSpec = tween(durationMillis = 150),
+                label = "swipeActionFgColor"
+            )
+
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(SpotifyGreen)
+                    .background(actionBgColor)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
                     contentDescription = stringResource(R.string.library_toast_added_to_queue),
-                    tint = SpotifyIconDark,
+                    tint = actionFgColor,
                     modifier = Modifier
                         .align(alignment)
                         .padding(horizontal = 24.dp)
