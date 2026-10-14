@@ -49,8 +49,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp as lerpColor
-import com.theveloper.pixelplay.presentation.components.createSmoothHeaderScrim
-import com.theveloper.pixelplay.presentation.components.createSmoothStatusBarScrim
+import com.theveloper.pixelplay.presentation.components.ditheredHeaderScrim
+import com.theveloper.pixelplay.presentation.components.ditheredStatusBarScrim
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -749,12 +749,6 @@ private fun SharedArtistTopBarProbe(
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedContentAlpha = 1f - solidAlpha
     val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
-    val headerOverlayBrush = remember(surfaceColor, expandedContentAlpha) {
-        createSmoothHeaderScrim(surfaceColor, expandedContentAlpha)
-    }
-    val statusBarBrush = remember(statusBarColor) {
-        createSmoothStatusBarScrim(statusBarColor)
-    }
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
@@ -770,6 +764,7 @@ private fun SharedArtistTopBarProbe(
         modifier = Modifier
             .fillMaxWidth()
             .height(headerHeight)
+            .background(surfaceColor)
             .clipToBounds()
     ) {
         if (expandedContentAlpha > 0.01f) {
@@ -795,7 +790,7 @@ private fun SharedArtistTopBarProbe(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(headerOverlayBrush)
+                    .ditheredHeaderScrim(surfaceColor)
             )
         }
 
@@ -803,7 +798,7 @@ private fun SharedArtistTopBarProbe(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp)
-                .background(statusBarBrush)
+                .ditheredStatusBarScrim(statusBarColor)
                 .align(Alignment.TopCenter)
         )
 
@@ -922,12 +917,6 @@ private fun CustomCollapsingTopBar(
     val backgroundAlpha = collapseFraction
     val headerContentAlpha = 1f - (collapseFraction * 2).coerceAtMost(1f)
     val showExpandedArtwork = headerContentAlpha > 0.01f
-    val headerOverlayBrush = remember(surfaceColor, headerContentAlpha) {
-        createSmoothHeaderScrim(surfaceColor, headerContentAlpha)
-    }
-    val statusBarBrush = remember(statusBarColor) {
-        createSmoothStatusBarScrim(statusBarColor)
-    }
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
@@ -958,7 +947,7 @@ private fun CustomCollapsingTopBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(headerHeight)
-                .background(surfaceColor.copy(alpha = backgroundAlpha))
+                .background(surfaceColor)
         ) {
             if (showExpandedArtwork) {
                 val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
@@ -985,15 +974,15 @@ private fun CustomCollapsingTopBar(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(headerOverlayBrush)
+                        .ditheredHeaderScrim(surfaceColor)
                 )
             }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
-                    .background(statusBarBrush)
-                    .align(Alignment.TopCenter)
+                .height(80.dp)
+                .ditheredStatusBarScrim(statusBarColor)
+                .align(Alignment.TopCenter)
             )
             Box(
                 modifier = Modifier

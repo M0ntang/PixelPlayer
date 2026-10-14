@@ -52,8 +52,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
-import com.theveloper.pixelplay.presentation.components.createSmoothHeaderScrim
-import com.theveloper.pixelplay.presentation.components.createSmoothStatusBarScrim
+import com.theveloper.pixelplay.presentation.components.ditheredHeaderScrim
+import com.theveloper.pixelplay.presentation.components.ditheredStatusBarScrim
 import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToQueueBox
 import com.theveloper.pixelplay.utils.formatTotalDuration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -582,12 +582,6 @@ private fun SharedAlbumTopBarProbe(
         else Color.White.copy(alpha = 0.4f)
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedContentAlpha = 1f - solidAlpha
-    val headerOverlayBrush = remember(surfaceColor, expandedContentAlpha) {
-        createSmoothHeaderScrim(surfaceColor, expandedContentAlpha)
-    }
-    val statusBarBrush = remember(statusBarColor) {
-        createSmoothStatusBarScrim(statusBarColor)
-    }
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
@@ -611,6 +605,7 @@ private fun SharedAlbumTopBarProbe(
         modifier = Modifier
             .fillMaxWidth()
             .height(headerHeight)
+            .background(surfaceColor)
             .clipToBounds()
     ) {
         if (expandedContentAlpha > 0.01f) {
@@ -628,7 +623,7 @@ private fun SharedAlbumTopBarProbe(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(headerOverlayBrush)
+                    .ditheredHeaderScrim(surfaceColor)
             )
         }
 
@@ -636,7 +631,7 @@ private fun SharedAlbumTopBarProbe(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp)
-                .background(statusBarBrush)
+                .ditheredStatusBarScrim(statusBarColor)
                 .align(Alignment.TopCenter)
         )
 
@@ -764,12 +759,6 @@ private fun CollapsingAlbumTopBar(
     val backgroundAlpha = collapseFraction
     val headerContentAlpha = 1f - (collapseFraction * 2).coerceAtMost(1f)
     val showExpandedArtwork = headerContentAlpha > 0.01f
-    val headerOverlayBrush = remember(surfaceColor, headerContentAlpha) {
-        createSmoothHeaderScrim(surfaceColor, headerContentAlpha)
-    }
-    val statusBarBrush = remember(statusBarColor) {
-        createSmoothStatusBarScrim(statusBarColor)
-    }
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
@@ -800,7 +789,7 @@ private fun CollapsingAlbumTopBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(headerHeight)
-                .background(surfaceColor.copy(alpha = backgroundAlpha))
+                .background(surfaceColor)
         ) {
             if (showExpandedArtwork) {
                 SmartImage(
@@ -817,14 +806,14 @@ private fun CollapsingAlbumTopBar(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(headerOverlayBrush)
+                        .ditheredHeaderScrim(surfaceColor)
                 )
             }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
-                    .background(statusBarBrush)
+                    .ditheredStatusBarScrim(statusBarColor)
                     .align(Alignment.TopCenter)
             )
 
