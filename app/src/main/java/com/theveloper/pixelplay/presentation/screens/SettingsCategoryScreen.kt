@@ -74,6 +74,7 @@ import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.BlurOff
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -162,6 +163,7 @@ import com.theveloper.pixelplay.data.preferences.AppLanguage
 import com.theveloper.pixelplay.data.preferences.AppThemeMode
 import com.theveloper.pixelplay.data.preferences.CollagePattern
 import com.theveloper.pixelplay.data.preferences.CarouselStyle
+import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
 import com.theveloper.pixelplay.data.preferences.LaunchTab
 import com.theveloper.pixelplay.data.preferences.LibraryNavigationMode
 import com.theveloper.pixelplay.data.preferences.NavBarStyle
@@ -623,6 +625,17 @@ fun SettingsCategoryScreen(
                                     selectedKey = uiState.carouselStyle,
                                     onSelectionChanged = { settingsViewModel.setCarouselStyle(it) },
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_view_carousel_24), null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_header_cover_style_title),
+                                    description = stringResource(R.string.settings_header_cover_style_subtitle),
+                                    options = mapOf(
+                                        HeaderCoverStyle.GRADIENT_BANNER to stringResource(R.string.settings_header_cover_style_banner),
+                                        HeaderCoverStyle.SQUARE to stringResource(R.string.settings_header_cover_style_square)
+                                    ),
+                                    selectedKey = uiState.headerCoverStyle,
+                                    onSelectionChanged = { settingsViewModel.setHeaderCoverStyle(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.Album, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
                             }
 

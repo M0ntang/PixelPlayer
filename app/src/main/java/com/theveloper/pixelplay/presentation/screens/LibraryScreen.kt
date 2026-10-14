@@ -140,6 +140,8 @@ import com.theveloper.pixelplay.data.model.SortOption
 import com.theveloper.pixelplay.data.model.StorageFilter
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
 import com.theveloper.pixelplay.presentation.components.SmartImage
+import com.theveloper.pixelplay.presentation.components.ditheredCardScrim
+import com.theveloper.pixelplay.presentation.components.ditheredHorizontalCardScrim
 import com.theveloper.pixelplay.presentation.components.resolveMainScreenBottomGradientHeight
 import com.theveloper.pixelplay.presentation.components.resolveNavBarOccupiedHeight
 import androidx.compose.foundation.layout.WindowInsets
@@ -3396,9 +3398,8 @@ fun AlbumGridItemRedesigned(
                             model = album.albumArtUriString,
                             contentDescription = stringResource(R.string.common_album_art_for_title, album.title),
                             contentScale = ContentScale.Crop,
-                            // Reducido el tamaño para mejorar el rendimiento del scroll, como se sugiere en el informe.
-                            // ContentScale.Crop se encargará de ajustar la imagen al aspect ratio.
-                            targetSize = Size(256, 256),
+                            targetSize = Size(512, 512),
+                            allowHardware = true,
                             modifier = Modifier
                                 .aspectRatio(3f / 2f)
                                 .fillMaxSize(),
@@ -3417,14 +3418,7 @@ fun AlbumGridItemRedesigned(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .aspectRatio(3f / 2f)
-                                .background(
-                                    remember(gradientBaseColor) { // Recordar el Brush
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                gradientBaseColor.copy(alpha = 0f), gradientBaseColor
-                                            )
-                                        )
-                                    })
+                                .ditheredCardScrim(gradientBaseColor)
                         )
                     }
                     Column(
@@ -3664,6 +3658,7 @@ fun AlbumListItem(
                             contentDescription = stringResource(R.string.common_album_art_for_title, album.title),
                             contentScale = ContentScale.Crop,
                             targetSize = Size(256, 256),
+                            allowHardware = true,
                             modifier = Modifier.fillMaxSize(),
                             onState = { state ->
                                 isLoadingImage = state is AsyncImagePainter.State.Loading
@@ -3677,14 +3672,7 @@ fun AlbumListItem(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            gradientBaseColor
-                                        )
-                                    )
-                                )
+                                .ditheredHorizontalCardScrim(gradientBaseColor)
                         )
                     }
 

@@ -42,6 +42,7 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -128,6 +129,7 @@ fun ArtistDetailScreen(
     val lazyListState = rememberLazyListState()
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
+    val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -162,7 +164,8 @@ fun ArtistDetailScreen(
     // --- Lógica del Header Colapsable ---
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val minTopBarHeight = 64.dp + statusBarHeight
-    val maxTopBarHeight = 300.dp
+    val isSquareHeader = headerCoverStyle == HeaderCoverStyle.SQUARE
+    val maxTopBarHeight = if (isSquareHeader) statusBarHeight + 360.dp else 300.dp
 
     val minTopBarHeightPx = with(density) { minTopBarHeight.toPx() }
     val maxTopBarHeightPx = with(density) { maxTopBarHeight.toPx() }
@@ -178,6 +181,11 @@ fun ArtistDetailScreen(
     }
 
     val topBarHeight = remember { Animatable(maxTopBarHeightPx) }
+    LaunchedEffect(maxTopBarHeightPx) {
+        if (topBarHeight.value > minTopBarHeightPx) {
+            topBarHeight.snapTo(maxTopBarHeightPx)
+        }
+    }
     val collapseFraction by remember(minTopBarHeightPx, maxTopBarHeightPx) {
         derivedStateOf {
             1f - ((topBarHeight.value - minTopBarHeightPx) / (maxTopBarHeightPx - minTopBarHeightPx)).coerceIn(0f, 1f)
@@ -415,6 +423,7 @@ fun ArtistDetailScreen(
                             collapseFraction = collapseFraction,
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
+                            headerCoverStyle = headerCoverStyle,
                             hasCustomImage = !artist.customImageUri.isNullOrBlank(),
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = {
@@ -438,6 +447,7 @@ fun ArtistDetailScreen(
                             collapseFraction = collapseFraction,
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
+                            headerCoverStyle = headerCoverStyle,
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
@@ -735,12 +745,14 @@ private fun SharedArtistTopBarProbe(
     collapseFraction: Float,
     headerHeight: Dp,
     headerImageRequestSize: Size,
+    headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     hasCustomImage: Boolean,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
     onChangeImage: () -> Unit,
     onClearCustomImage: () -> Unit
 ) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     var showImageMenu by remember { mutableStateOf(false) }
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
@@ -752,8 +764,12 @@ private fun SharedArtistTopBarProbe(
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
-    val fallbackStatusBarColor = remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
-        lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+    val fallbackStatusBarColor = if (isSquareMode) {
+        surfaceColor
+    } else {
+        remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
+            lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+        }
     }
     val titleVerticalBias = lerp(1f, -1f, collapseFraction)
     val shuffleAlignment = BiasAlignment(horizontalBias = 1f, verticalBias = titleVerticalBias)
@@ -767,40 +783,94 @@ private fun SharedArtistTopBarProbe(
             .background(surfaceColor)
             .clipToBounds()
     ) {
-        if (expandedContentAlpha > 0.01f) {
-            if (!displayUrl.isNullOrEmpty()) {
-                SmartImage(
-                    model = displayUrl,
-                    contentDescription = artist.name,
-                    contentScale = ContentScale.Crop,
-                    targetSize = headerImageRequestSize,
-                    allowHardware = true,
-                    crossfadeDurationMillis = 0,
-                    alpha = expandedContentAlpha,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                MusicIconPattern(
+        if (isSquareMode) {
+            if (expandedContentAlpha > 0.01f) {
+                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(190.dp, 220.dp)
+                val squareScale = 1f - (collapseFraction * 0.25f)
+                val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(top = 48.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    if (!displayUrl.isNullOrEmpty()) {
+                        SmartImage(
+                            model = displayUrl,
+                            contentDescription = artist.name,
+                            contentScale = ContentScale.Crop,
+                            targetSize = Size(
+                                width = with(LocalDensity.current) { squareSize.roundToPx() },
+                                height = with(LocalDensity.current) { squareSize.roundToPx() }
+                            ),
+                            allowHardware = true,
+                            crossfadeDurationMillis = 0,
+                            alpha = squareAlpha,
+                            modifier = Modifier
+                                .size(squareSize)
+                                .graphicsLayer {
+                                    scaleX = squareScale
+                                    scaleY = squareScale
+                                    alpha = squareAlpha
+                                }
+                                .clip(RoundedCornerShape(16.dp))
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(squareSize)
+                                .graphicsLayer {
+                                    scaleX = squareScale
+                                    scaleY = squareScale
+                                    alpha = squareAlpha
+                                }
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            MusicIconPattern(modifier = Modifier.fillMaxSize())
+                        }
+                    }
+                }
+            }
+        } else {
+            if (expandedContentAlpha > 0.01f) {
+                if (!displayUrl.isNullOrEmpty()) {
+                    SmartImage(
+                        model = displayUrl,
+                        contentDescription = artist.name,
+                        contentScale = ContentScale.Crop,
+                        targetSize = headerImageRequestSize,
+                        allowHardware = true,
+                        crossfadeDurationMillis = 0,
+                        alpha = expandedContentAlpha,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    MusicIconPattern(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = expandedContentAlpha }
+                    )
+                }
+
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .graphicsLayer { alpha = expandedContentAlpha }
+                        .ditheredHeaderScrim(surfaceColor)
                 )
             }
 
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .ditheredHeaderScrim(surfaceColor)
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .ditheredStatusBarScrim(statusBarColor)
+                    .align(Alignment.TopCenter)
             )
         }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp)
-                .ditheredStatusBarScrim(statusBarColor)
-                .align(Alignment.TopCenter)
-        )
 
         CollapsibleCommonTopBar(
             title = artist.name,
@@ -904,11 +974,13 @@ private fun CustomCollapsingTopBar(
     collapseFraction: Float, // 0.0 = expandido, 1.0 = colapsado
     headerHeight: Dp,
     headerImageRequestSize: Size,
+    headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
     onChangeImage: () -> Unit,
     onClearCustomImage: () -> Unit
 ) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor = if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f)
 
@@ -921,8 +993,12 @@ private fun CustomCollapsingTopBar(
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
-    val fallbackStatusBarColor = remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
-        lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+    val fallbackStatusBarColor = if (isSquareMode) {
+        surfaceColor
+    } else {
+        remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
+            lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+        }
     }
 
     // Title animation
@@ -949,41 +1025,97 @@ private fun CustomCollapsingTopBar(
                 .height(headerHeight)
                 .background(surfaceColor)
         ) {
-            if (showExpandedArtwork) {
-                val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
-                if (!displayUrl.isNullOrEmpty()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(displayUrl)
-                            .size(headerImageRequestSize)
-                            .allowHardware(true)
-                            .crossfade(false)
-                            .build(),
-                        contentDescription = artist.name,
-                        contentScale = ContentScale.Crop,
-                        alpha = headerContentAlpha,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    MusicIconPattern(
+            if (isSquareMode) {
+                if (showExpandedArtwork) {
+                    val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
+                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(190.dp, 220.dp)
+                    val squareScale = 1f - (collapseFraction * 0.25f)
+                    val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(top = 48.dp),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        if (!displayUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(displayUrl)
+                                    .size(with(LocalDensity.current) {
+                                        coil.size.Size(squareSize.roundToPx(), squareSize.roundToPx())
+                                    })
+                                    .allowHardware(true)
+                                    .crossfade(false)
+                                    .build(),
+                                contentDescription = artist.name,
+                                contentScale = ContentScale.Crop,
+                                alpha = squareAlpha,
+                                modifier = Modifier
+                                    .size(squareSize)
+                                    .graphicsLayer {
+                                        scaleX = squareScale
+                                        scaleY = squareScale
+                                        alpha = squareAlpha
+                                    }
+                                    .clip(RoundedCornerShape(16.dp))
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(squareSize)
+                                    .graphicsLayer {
+                                        scaleX = squareScale
+                                        scaleY = squareScale
+                                        alpha = squareAlpha
+                                    }
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                MusicIconPattern(modifier = Modifier.fillMaxSize())
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (showExpandedArtwork) {
+                    val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
+                    if (!displayUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(displayUrl)
+                                .size(headerImageRequestSize)
+                                .allowHardware(true)
+                                .crossfade(false)
+                                .build(),
+                            contentDescription = artist.name,
+                            contentScale = ContentScale.Crop,
+                            alpha = headerContentAlpha,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        MusicIconPattern(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { alpha = headerContentAlpha }
+                        )
+                    }
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .graphicsLayer { alpha = headerContentAlpha }
+                            .ditheredHeaderScrim(surfaceColor)
                     )
                 }
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .ditheredHeaderScrim(surfaceColor)
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .ditheredStatusBarScrim(statusBarColor)
+                        .align(Alignment.TopCenter)
                 )
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                .height(80.dp)
-                .ditheredStatusBarScrim(statusBarColor)
-                .align(Alignment.TopCenter)
-            )
             Box(
                 modifier = Modifier
                     .fillMaxSize()

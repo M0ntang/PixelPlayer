@@ -123,6 +123,7 @@ class UserPreferencesRepository @Inject constructor(
         val NAV_BAR_STYLE = stringPreferencesKey("nav_bar_style")
         val NAV_BAR_COMPACT_MODE = booleanPreferencesKey("nav_bar_compact_mode")
         val CAROUSEL_STYLE = stringPreferencesKey("carousel_style")
+        val HEADER_COVER_STYLE = stringPreferencesKey("header_cover_style")
         val LIBRARY_NAVIGATION_MODE = stringPreferencesKey("library_navigation_mode")
         val LAUNCH_TAB = stringPreferencesKey("launch_tab")
 
@@ -990,6 +991,13 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
 
     suspend fun setCarouselStyle(style: String) {
         dataStore.edit { it[PreferencesKeys.CAROUSEL_STYLE] = style }
+    }
+
+    val headerCoverStyleFlow: Flow<String> =
+        pref { it[PreferencesKeys.HEADER_COVER_STYLE] ?: HeaderCoverStyle.GRADIENT_BANNER }
+
+    suspend fun setHeaderCoverStyle(style: String) {
+        dataStore.edit { it[PreferencesKeys.HEADER_COVER_STYLE] = style }
     }
 
     val launchTabFlow: Flow<String> =

@@ -198,6 +198,10 @@
     <string name="settings_carousel_style_subtitle">Choose the appearance for the album carousel.</string>
     <string name="settings_carousel_no_peek">No Peek</string>
     <string name="settings_carousel_one_peek">One Peek</string>
+    <string name="settings_header_cover_style_title">Header Cover Style</string>
+    <string name="settings_header_cover_style_subtitle">Choose the cover art presentation on album and artist screens.</string>
+    <string name="settings_header_cover_style_banner">Banner</string>
+    <string name="settings_header_cover_style_square">Square 1:1</string>
     <string name="settings_home_collage_section">Home Collage</string>
     <string name="settings_collage_pattern_title">Collage Pattern</string>
     <string name="settings_collage_pattern_subtitle">Choose the shape arrangement for the Your Mix collage.</string>

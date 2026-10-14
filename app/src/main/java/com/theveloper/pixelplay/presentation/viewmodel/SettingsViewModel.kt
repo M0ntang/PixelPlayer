@@ -14,6 +14,7 @@ import com.theveloper.pixelplay.data.backup.model.RestoreResult
 import com.theveloper.pixelplay.data.backup.model.ValidationError
 import com.theveloper.pixelplay.data.preferences.AppThemeMode
 import com.theveloper.pixelplay.data.preferences.CarouselStyle
+import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
 import com.theveloper.pixelplay.data.preferences.LibraryNavigationMode
 import com.theveloper.pixelplay.data.preferences.ThemePreference
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
@@ -64,6 +65,7 @@ data class SettingsUiState(
     val navBarStyle: String = NavBarStyle.DEFAULT,
     val navBarCompactMode: Boolean = false,
     val carouselStyle: String = CarouselStyle.NO_PEEK,
+    val headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     val libraryNavigationMode: String = LibraryNavigationMode.TAB_ROW,
     val launchTab: String = LaunchTab.HOME,
     val keepPlayingInBackground: Boolean = true,
@@ -148,6 +150,7 @@ private sealed interface SettingsUiUpdate {
         val navBarCompactMode: Boolean,
         val libraryNavigationMode: String,
         val carouselStyle: String,
+        val headerCoverStyle: String,
         val launchTab: String,
         val showPlayerFileInfo: Boolean
     ) : SettingsUiUpdate
@@ -604,6 +607,7 @@ class SettingsViewModel @Inject constructor(
                 userPreferencesRepository.navBarCompactModeFlow,
                 userPreferencesRepository.libraryNavigationModeFlow,
                 userPreferencesRepository.carouselStyleFlow,
+                userPreferencesRepository.headerCoverStyleFlow,
                 userPreferencesRepository.launchTabFlow,
                 userPreferencesRepository.showPlayerFileInfoFlow
             ) { values ->
@@ -619,8 +623,9 @@ class SettingsViewModel @Inject constructor(
                     navBarCompactMode = values[8] as Boolean,
                     libraryNavigationMode = values[9] as String,
                     carouselStyle = values[10] as String,
-                    launchTab = values[11] as String,
-                    showPlayerFileInfo = values[12] as Boolean
+                    headerCoverStyle = values[11] as String,
+                    launchTab = values[12] as String,
+                    showPlayerFileInfo = values[13] as Boolean
                 )
             }.collect { update ->
                 _uiState.update { state ->
@@ -636,6 +641,7 @@ class SettingsViewModel @Inject constructor(
                         navBarCompactMode = update.navBarCompactMode,
                         libraryNavigationMode = update.libraryNavigationMode,
                         carouselStyle = update.carouselStyle,
+                        headerCoverStyle = update.headerCoverStyle,
                         launchTab = update.launchTab,
                         showPlayerFileInfo = update.showPlayerFileInfo
                     )
@@ -937,6 +943,12 @@ class SettingsViewModel @Inject constructor(
     fun setCarouselStyle(style: String) {
         viewModelScope.launch {
             userPreferencesRepository.setCarouselStyle(style)
+        }
+    }
+
+    fun setHeaderCoverStyle(style: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setHeaderCoverStyle(style)
         }
     }
 

@@ -67,7 +67,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -136,6 +138,7 @@ fun AlbumDetailScreen(
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
+    val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
 
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showEditAlbumSheet by remember { mutableStateOf(false) }
@@ -213,7 +216,8 @@ fun AlbumDetailScreen(
 
                 val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
                 val minTopBarHeight = 64.dp + statusBarHeight
-                val maxTopBarHeight = 300.dp
+                val isSquareHeader = headerCoverStyle == HeaderCoverStyle.SQUARE
+                val maxTopBarHeight = if (isSquareHeader) statusBarHeight + 360.dp else 300.dp
 
                 val minTopBarHeightPx = with(density) { minTopBarHeight.toPx() }
                 val maxTopBarHeightPx = with(density) { maxTopBarHeight.toPx() }
@@ -229,6 +233,11 @@ fun AlbumDetailScreen(
                 }
 
                 val topBarHeight = remember { Animatable(maxTopBarHeightPx) }
+                LaunchedEffect(maxTopBarHeightPx) {
+                    if (topBarHeight.value > minTopBarHeightPx) {
+                        topBarHeight.snapTo(maxTopBarHeightPx)
+                    }
+                }
                 val collapseFraction by remember(minTopBarHeightPx, maxTopBarHeightPx) {
                     derivedStateOf {
                         1f - ((topBarHeight.value - minTopBarHeightPx) / (maxTopBarHeightPx - minTopBarHeightPx)).coerceIn(
@@ -406,6 +415,7 @@ fun AlbumDetailScreen(
                             collapseFraction = collapseFraction,
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
+                            headerCoverStyle = headerCoverStyle,
                             onHeaderArtworkState = { state ->
                                 if (state is AsyncImagePainter.State.Success) {
                                     headerArtworkLoaded = true
@@ -427,6 +437,7 @@ fun AlbumDetailScreen(
                             collapseFraction = collapseFraction,
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
+                            headerCoverStyle = headerCoverStyle,
                             onHeaderArtworkState = { state ->
                                 if (state is AsyncImagePainter.State.Success) {
                                     headerArtworkLoaded = true
@@ -571,11 +582,13 @@ private fun SharedAlbumTopBarProbe(
     collapseFraction: Float,
     headerHeight: Dp,
     headerImageRequestSize: Size,
+    headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
         if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f)
@@ -585,8 +598,12 @@ private fun SharedAlbumTopBarProbe(
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
-    val fallbackStatusBarColor = remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
-        lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+    val fallbackStatusBarColor = if (isSquareMode) {
+        surfaceColor
+    } else {
+        remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
+            lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+        }
     }
     val titleVerticalBias = lerp(1f, -1f, collapseFraction)
     val shuffleAlignment = BiasAlignment(horizontalBias = 1f, verticalBias = titleVerticalBias)
@@ -608,32 +625,70 @@ private fun SharedAlbumTopBarProbe(
             .background(surfaceColor)
             .clipToBounds()
     ) {
-        if (expandedContentAlpha > 0.01f) {
-            SmartImage(
-                model = album.albumArtUriString,
-                contentDescription = stringResource(R.string.album_cover_for, album.title),
-                contentScale = ContentScale.Crop,
-                targetSize = headerImageRequestSize,
-                allowHardware = true,
-                crossfadeDurationMillis = 0,
-                alpha = expandedContentAlpha,
-                onState = onHeaderArtworkState,
-                modifier = Modifier.fillMaxSize()
-            )
+        if (isSquareMode) {
+            if (expandedContentAlpha > 0.01f) {
+                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(190.dp, 220.dp)
+                val squareScale = 1f - (collapseFraction * 0.25f)
+                val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(top = 48.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    SmartImage(
+                        model = album.albumArtUriString,
+                        contentDescription = stringResource(R.string.album_cover_for, album.title),
+                        contentScale = ContentScale.Crop,
+                        targetSize = Size(
+                            width = with(LocalDensity.current) { squareSize.roundToPx() },
+                            height = with(LocalDensity.current) { squareSize.roundToPx() }
+                        ),
+                        allowHardware = true,
+                        crossfadeDurationMillis = 0,
+                        alpha = squareAlpha,
+                        onState = onHeaderArtworkState,
+                        modifier = Modifier
+                            .size(squareSize)
+                            .graphicsLayer {
+                                scaleX = squareScale
+                                scaleY = squareScale
+                                alpha = squareAlpha
+                            }
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+                }
+            }
+        } else {
+            if (expandedContentAlpha > 0.01f) {
+                SmartImage(
+                    model = album.albumArtUriString,
+                    contentDescription = stringResource(R.string.album_cover_for, album.title),
+                    contentScale = ContentScale.Crop,
+                    targetSize = headerImageRequestSize,
+                    allowHardware = true,
+                    crossfadeDurationMillis = 0,
+                    alpha = expandedContentAlpha,
+                    onState = onHeaderArtworkState,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .ditheredHeaderScrim(surfaceColor)
+                )
+            }
+
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .ditheredHeaderScrim(surfaceColor)
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .ditheredStatusBarScrim(statusBarColor)
+                    .align(Alignment.TopCenter)
             )
         }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp)
-                .ditheredStatusBarScrim(statusBarColor)
-                .align(Alignment.TopCenter)
-        )
 
         CollapsibleCommonTopBar(
             title = album.title,
@@ -743,11 +798,13 @@ private fun CollapsingAlbumTopBar(
     collapseFraction: Float,
     headerHeight: Dp,
     headerImageRequestSize: Size,
+    headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
         if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(
@@ -763,8 +820,12 @@ private fun CollapsingAlbumTopBar(
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
-    val fallbackStatusBarColor = remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
-        lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+    val fallbackStatusBarColor = if (isSquareMode) {
+        surfaceColor
+    } else {
+        remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
+            lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
+        }
     }
 
     // Title animation
@@ -791,31 +852,69 @@ private fun CollapsingAlbumTopBar(
                 .height(headerHeight)
                 .background(surfaceColor)
         ) {
-            if (showExpandedArtwork) {
-                SmartImage(
-                    model = album.albumArtUriString,
-                    contentDescription = stringResource(R.string.album_cover_for, album.title),
-                    contentScale = ContentScale.Crop,
-                    targetSize = headerImageRequestSize,
-                    allowHardware = true,
-                    crossfadeDurationMillis = 0,
-                    alpha = headerContentAlpha,
-                    onState = onHeaderArtworkState,
-                    modifier = Modifier.fillMaxSize()
-                )
+            if (isSquareMode) {
+                if (showExpandedArtwork) {
+                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(190.dp, 220.dp)
+                    val squareScale = 1f - (collapseFraction * 0.25f)
+                    val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(top = 48.dp),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        SmartImage(
+                            model = album.albumArtUriString,
+                            contentDescription = stringResource(R.string.album_cover_for, album.title),
+                            contentScale = ContentScale.Crop,
+                            targetSize = Size(
+                                width = with(LocalDensity.current) { squareSize.roundToPx() },
+                                height = with(LocalDensity.current) { squareSize.roundToPx() }
+                            ),
+                            allowHardware = true,
+                            crossfadeDurationMillis = 0,
+                            alpha = squareAlpha,
+                            onState = onHeaderArtworkState,
+                            modifier = Modifier
+                                .size(squareSize)
+                                .graphicsLayer {
+                                    scaleX = squareScale
+                                    scaleY = squareScale
+                                    alpha = squareAlpha
+                                }
+                                .clip(RoundedCornerShape(16.dp))
+                        )
+                    }
+                }
+            } else {
+                if (showExpandedArtwork) {
+                    SmartImage(
+                        model = album.albumArtUriString,
+                        contentDescription = stringResource(R.string.album_cover_for, album.title),
+                        contentScale = ContentScale.Crop,
+                        targetSize = headerImageRequestSize,
+                        allowHardware = true,
+                        crossfadeDurationMillis = 0,
+                        alpha = headerContentAlpha,
+                        onState = onHeaderArtworkState,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .ditheredHeaderScrim(surfaceColor)
+                    )
+                }
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .ditheredHeaderScrim(surfaceColor)
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .ditheredStatusBarScrim(statusBarColor)
+                        .align(Alignment.TopCenter)
                 )
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .ditheredStatusBarScrim(statusBarColor)
-                    .align(Alignment.TopCenter)
-            )
 
             // Top bar content (buttons, title, etc.)
             Box(
