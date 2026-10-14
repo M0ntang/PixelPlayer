@@ -493,7 +493,7 @@ class PlayerViewModel @Inject constructor(
     val headerCoverStyle: StateFlow<String> = userPreferencesRepository.headerCoverStyleFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = HeaderCoverStyle.GRADIENT_BANNER
         )
 

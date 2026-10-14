@@ -138,6 +138,7 @@ import com.theveloper.pixelplay.data.model.FolderSource
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.model.SortOption
 import com.theveloper.pixelplay.data.model.StorageFilter
+import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
 import com.theveloper.pixelplay.presentation.components.SmartImage
 import com.theveloper.pixelplay.presentation.components.ditheredCardScrim
@@ -3277,8 +3278,10 @@ fun AlbumGridItemRedesigned(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER
 ) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayDarkTheme.current
 
@@ -3321,8 +3324,8 @@ fun AlbumGridItemRedesigned(
             ) {
                 ShimmerBox(
                     modifier = Modifier
-                        .aspectRatio(3f / 2f)
-                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .aspectRatio(if (isSquareMode) 1f else 3f / 2f)
                 )
                 Column(
                     modifier = Modifier
@@ -3401,23 +3404,20 @@ fun AlbumGridItemRedesigned(
                             targetSize = Size(512, 512),
                             allowHardware = true,
                             modifier = Modifier
-                                .aspectRatio(3f / 2f)
-                                .fillMaxSize(),
+                                .fillMaxWidth()
+                                .aspectRatio(3f / 2f),
                             onState = { state ->
                                 isLoadingImage = state is AsyncImagePainter.State.Loading
                             }
                         )
                         if (isLoadingImage) {
                             ShimmerBox(
-                                modifier = Modifier
-                                    .aspectRatio(3f / 2f)
-                                    .fillMaxSize()
+                                modifier = Modifier.matchParentSize()
                             )
                         }
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .aspectRatio(3f / 2f)
+                                .matchParentSize()
                                 .ditheredCardScrim(gradientBaseColor)
                         )
                     }
@@ -3665,13 +3665,13 @@ fun AlbumListItem(
                             }
                         )
                         if (isLoadingImage) {
-                            ShimmerBox(modifier = Modifier.fillMaxSize())
+                            ShimmerBox(modifier = Modifier.matchParentSize())
                         }
 
                         // Gradient Overlay
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .matchParentSize()
                                 .ditheredHorizontalCardScrim(gradientBaseColor)
                         )
                     }
