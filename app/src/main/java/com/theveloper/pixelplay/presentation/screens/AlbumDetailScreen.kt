@@ -27,8 +27,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -43,6 +46,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToQueueBox
+import com.theveloper.pixelplay.utils.formatTotalDuration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -191,6 +197,9 @@ fun AlbumDetailScreen(
                 val songsByDisc = remember(songs) {
                     songs.groupBy { it.discNumber ?: 1 }
                 }
+                val totalDurationText = remember(songs) { formatTotalDuration(songs) }
+                val context = LocalContext.current
+                val toastAddedToQueue = stringResource(R.string.library_toast_added_to_queue)
                 val lazyListState = rememberLazyListState()
 
                 val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -315,14 +324,26 @@ fun AlbumDetailScreen(
                         songsByDisc.forEach { (discNumber, discSongs) ->
                             if (songsByDisc.size > 1) {
                                 item(key = "disc_header_$discNumber") {
-                                    Text(
-                                        text = stringResource(R.string.album_disc_number_header, discNumber),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold,
+                                    val discDurationText = remember(discSongs) { formatTotalDuration(discSongs) }
+                                    Row(
                                         modifier = Modifier
-                                            .padding(top = 16.dp, bottom = 8.dp, start = 8.dp)
-                                    )
+                                            .fillMaxWidth()
+                                            .padding(top = 16.dp, bottom = 8.dp, start = 8.dp, end = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.album_disc_number_header, discNumber),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${formatSongCount(discSongs.size)} • $discDurationText",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                             items(
@@ -330,17 +351,24 @@ fun AlbumDetailScreen(
                                 key = { song -> "album_song_${song.id}" },
                                 contentType = { "album_song" }
                             ) { song ->
-                                EnhancedSongListItem(
-                                    song = song,
-                                    isCurrentSong = stablePlayerState.currentSong?.id == song.id,
-                                    isPlaying = stablePlayerState.isPlaying,
-                                    showAlbumArt = false,
-                                    onMoreOptionsClick = {
-                                        playerViewModel.selectSongForInfo(song)
-                                        showSongInfoBottomSheet = true
-                                    },
-                                    onClick = { playerViewModel.showAndPlaySong(song, songs) }
-                                )
+                                SwipeToQueueBox(
+                                    onSwipeToQueue = {
+                                        playerViewModel.addSongToQueue(song)
+                                        playerViewModel.sendToast(toastAddedToQueue)
+                                    }
+                                ) {
+                                    EnhancedSongListItem(
+                                        song = song,
+                                        isCurrentSong = stablePlayerState.currentSong?.id == song.id,
+                                        isPlaying = stablePlayerState.isPlaying,
+                                        showAlbumArt = false,
+                                        onMoreOptionsClick = {
+                                            playerViewModel.selectSongForInfo(song)
+                                            showSongInfoBottomSheet = true
+                                        },
+                                        onClick = { playerViewModel.showAndPlaySong(song, songs) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -361,6 +389,7 @@ fun AlbumDetailScreen(
                         SharedAlbumTopBarProbe(
                             album = album,
                             songsCount = songs.size,
+                            totalDuration = totalDurationText,
                             collapseFraction = collapseFraction,
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
@@ -372,8 +401,7 @@ fun AlbumDetailScreen(
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
-                                    val randomSong = songs.random()
-                                    playerViewModel.showAndPlaySong(randomSong, songs)
+                                    playerViewModel.showAndPlaySong(songs.first(), songs)
                                 }
                             }
                         )
@@ -381,6 +409,7 @@ fun AlbumDetailScreen(
                         CollapsingAlbumTopBar(
                             album = album,
                             songsCount = songs.size,
+                            totalDuration = totalDurationText,
                             collapseFraction = collapseFraction,
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
@@ -392,8 +421,7 @@ fun AlbumDetailScreen(
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
-                                    val randomSong = songs.random()
-                                    playerViewModel.showAndPlaySong(randomSong, songs)
+                                    playerViewModel.showAndPlaySong(songs.first(), songs)
                                 }
                             }
                         )
@@ -502,6 +530,7 @@ fun AlbumDetailScreen(
 private fun SharedAlbumTopBarProbe(
     album: Album,
     songsCount: Int,
+    totalDuration: String = "",
     collapseFraction: Float,
     headerHeight: Dp,
     headerImageRequestSize: Size,
@@ -536,6 +565,14 @@ private fun SharedAlbumTopBarProbe(
     }
     val titleVerticalBias = lerp(1f, -1f, collapseFraction)
     val shuffleAlignment = BiasAlignment(horizontalBias = 1f, verticalBias = titleVerticalBias)
+
+    val subtitleText = remember(album.artist, songsCount, totalDuration) {
+        listOfNotNull(
+            album.artist.takeIf { it.isNotBlank() },
+            formatSongCount(songsCount),
+            totalDuration.takeIf { it.isNotBlank() }
+        ).joinToString(" • ")
+    }
 
     PixelPlayStatusBarStyle(color = fallbackStatusBarColor)
 
@@ -574,7 +611,7 @@ private fun SharedAlbumTopBarProbe(
 
         CollapsibleCommonTopBar(
             title = album.title,
-            subtitle = "${album.artist} • ${formatSongCount(songsCount)}",
+            subtitle = subtitleText,
             collapseFraction = collapseFraction,
             headerHeight = headerHeight,
             onBackClick = onBackPressed,
@@ -614,7 +651,11 @@ private fun SharedAlbumTopBarProbe(
                     alpha = expandedContentAlpha
                 }
         ) {
-            Icon(Icons.Rounded.Shuffle, contentDescription = stringResource(R.string.common_shuffle_play_album))
+            Icon(
+                imageVector = Icons.Rounded.PlayArrow,
+                contentDescription = stringResource(R.string.common_play_album),
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 }
@@ -624,6 +665,7 @@ private fun SharedAlbumTopBarProbe(
 private fun CollapsingAlbumTopBar(
     album: Album,
     songsCount: Int,
+    totalDuration: String = "",
     collapseFraction: Float,
     headerHeight: Dp,
     headerImageRequestSize: Size,
@@ -762,12 +804,15 @@ private fun CollapsingAlbumTopBar(
                             maxLines = titleMaxLines,
                             overflow = TextOverflow.Ellipsis
                         )
+                        val subtitleText = remember(album.artist, songsCount, totalDuration) {
+                            listOfNotNull(
+                                album.artist.takeIf { it.isNotBlank() },
+                                formatSongCount(songsCount),
+                                totalDuration.takeIf { it.isNotBlank() }
+                            ).joinToString(" • ")
+                        }
                         Text(
-                            text = stringResource(
-                                R.string.album_detail_meta_line,
-                                album.artist,
-                                formatSongCount(songsCount)
-                            ),
+                            text = subtitleText,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -789,7 +834,11 @@ private fun CollapsingAlbumTopBar(
                             alpha = fabScale
                         }
                 ) {
-                    Icon(Icons.Rounded.Shuffle, contentDescription = stringResource(R.string.common_shuffle_play_album))
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = stringResource(R.string.common_play_album),
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
         }

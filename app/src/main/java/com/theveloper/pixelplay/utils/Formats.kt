@@ -24,11 +24,13 @@ fun formatTotalDuration(songs: List<Song>): String {
     val totalMillis = songs.sumOf { it.duration }
     val hours = TimeUnit.MILLISECONDS.toHours(totalMillis)
     val minutes = TimeUnit.MILLISECONDS.toMinutes(totalMillis) % 60
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(totalMillis) % 60
     val context = PixelPlayApplication.instance.applicationContext
-    return if (hours > 0) {
-        context.getString(R.string.duration_hours_minutes_long, hours, minutes)
-    } else {
-        context.getString(R.string.duration_minutes_long, minutes)
+    return when {
+        hours > 0 && minutes > 0 -> context.getString(R.string.duration_hours_minutes_long, hours, minutes)
+        hours > 0 -> context.getString(R.string.duration_hours_medium, hours)
+        minutes > 0 -> context.getString(R.string.duration_minutes_long, minutes)
+        else -> context.getString(R.string.duration_seconds_medium, seconds)
     }
 }
 
