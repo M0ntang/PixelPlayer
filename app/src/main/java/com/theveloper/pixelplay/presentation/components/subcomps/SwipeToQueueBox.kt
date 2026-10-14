@@ -39,8 +39,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
 
-private val SpotifyGreen = Color(0xFF1ED760)
-private val SpotifyIconDark = Color(0xFF0F1711)
+val SpotifyGreen = Color(0xFF1ED760)
+val SpotifyIconDark = Color(0xFF0F1711)
 
 /**
  * Spotify-style swipeable container that reveals a green "Add to Queue" action

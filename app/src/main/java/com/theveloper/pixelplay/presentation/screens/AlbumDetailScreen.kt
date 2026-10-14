@@ -47,6 +47,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import com.theveloper.pixelplay.presentation.components.subcomps.SpotifyGreen
+import com.theveloper.pixelplay.presentation.components.subcomps.SpotifyIconDark
 import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToQueueBox
 import com.theveloper.pixelplay.utils.formatTotalDuration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -640,6 +642,8 @@ private fun SharedAlbumTopBarProbe(
         LargeExtendedFloatingActionButton(
             onClick = onPlayClick,
             shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+            containerColor = SpotifyGreen,
+            contentColor = SpotifyIconDark,
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             modifier = Modifier
                 .align(shuffleAlignment)
@@ -824,6 +828,8 @@ private fun CollapsingAlbumTopBar(
                 LargeExtendedFloatingActionButton(
                     onClick = onPlayClick,
                     shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+                    containerColor = SpotifyGreen,
+                    contentColor = SpotifyIconDark,
                     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
