@@ -352,6 +352,10 @@ fun AlbumDetailScreen(
                                 contentType = { "album_song" }
                             ) { song ->
                                 SwipeToQueueBox(
+                                    swipeStateIdentity = song.id,
+                                    coverArtUri = song.albumArtUriString ?: album.albumArtUriString,
+                                    themeStateHolder = playerViewModel.themeStateHolder,
+                                    backgroundHorizontalPadding = 0.dp,
                                     onSwipeToQueue = {
                                         playerViewModel.addSongToQueue(song)
                                         playerViewModel.sendToast(toastAddedToQueue)
