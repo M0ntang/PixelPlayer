@@ -165,7 +165,7 @@ fun ArtistDetailScreen(
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val minTopBarHeight = 64.dp + statusBarHeight
     val isSquareHeader = headerCoverStyle == HeaderCoverStyle.SQUARE
-    val maxTopBarHeight = if (isSquareHeader) statusBarHeight + 360.dp else 300.dp
+    val maxTopBarHeight = if (isSquareHeader) statusBarHeight + 380.dp else 300.dp
 
     val minTopBarHeightPx = with(density) { minTopBarHeight.toPx() }
     val maxTopBarHeightPx = with(density) { maxTopBarHeight.toPx() }
@@ -785,7 +785,7 @@ private fun SharedArtistTopBarProbe(
     ) {
         if (isSquareMode) {
             if (expandedContentAlpha > 0.01f) {
-                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 100.dp).coerceIn(200.dp, 260.dp)
+                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(180.dp, 215.dp)
                 val squareScale = 1f - (collapseFraction * 0.25f)
                 val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
 
@@ -793,7 +793,7 @@ private fun SharedArtistTopBarProbe(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(top = 48.dp),
+                        .padding(top = 44.dp),
                     contentAlignment = Alignment.TopCenter
                 ) {
                     if (!displayUrl.isNullOrEmpty()) {
@@ -883,14 +883,14 @@ private fun SharedArtistTopBarProbe(
             expandedTitleStartPadding = 24.dp,
             collapsedTitleEndPadding = 88.dp,
             expandedTitleEndPadding = 136.dp,
-            containerHeightRange = 112.dp to 56.dp,
+            containerHeightRange = (if (isSquareMode) 100.dp else 112.dp) to 56.dp,
             titleStyle = MaterialTheme.typography.headlineMedium.copy(
                 fontFamily = GoogleSansRounded,
                 fontWeight = FontWeight.SemiBold,
                 textGeometricTransform = TextGeometricTransform(scaleX = 1.08f)
             ),
             titleScaleRange = 1f to 1f,
-            titleFontSizeRange = 30.sp to 18.sp,
+            titleFontSizeRange = (if (isSquareMode) 22.sp else 30.sp) to 18.sp,
             maxLines = if (collapseFraction < 0.5f) 2 else 1,
             collapsedSubtitleMaxLines = 1,
             expandedSubtitleMaxLines = 2,
@@ -1007,8 +1007,8 @@ private fun CustomCollapsingTopBar(
     val titleMaxLines = if(collapseFraction < 0.5f) 2 else 1
     val titleVerticalBias = lerp(1f, -1f, collapseFraction)
     val animatedTitleAlignment = BiasAlignment(horizontalBias = -1f, verticalBias = titleVerticalBias)
-    val titleContainerHeight = lerp(88.dp, 56.dp, collapseFraction)
-    val yOffsetCorrection = lerp( (titleContainerHeight / 2) - 64.dp, 0.dp, collapseFraction)
+    val titleContainerHeight = lerp(if (isSquareMode) 100.dp else 88.dp, 56.dp, collapseFraction)
+    val yOffsetCorrection = if (isSquareMode) 0.dp else lerp((titleContainerHeight / 2) - 64.dp, 0.dp, collapseFraction)
 
 
     Box(
@@ -1028,7 +1028,7 @@ private fun CustomCollapsingTopBar(
             if (isSquareMode) {
                 if (showExpandedArtwork) {
                     val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
-                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 100.dp).coerceIn(200.dp, 260.dp)
+                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(180.dp, 215.dp)
                     val squareScale = 1f - (collapseFraction * 0.25f)
                     val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
 
@@ -1036,7 +1036,7 @@ private fun CustomCollapsingTopBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(top = 48.dp),
+                            .padding(top = 44.dp),
                         contentAlignment = Alignment.TopCenter
                     ) {
                         if (!displayUrl.isNullOrEmpty()) {
@@ -1193,8 +1193,8 @@ private fun CustomCollapsingTopBar(
                         Text(
                             text = artist.name,
                             style = MaterialTheme.typography.headlineMedium.copy(
-                                fontSize = 26.sp,
-                                textGeometricTransform = TextGeometricTransform(scaleX = 1.2f),
+                                fontSize = if (isSquareMode) 22.sp else 26.sp,
+                                textGeometricTransform = TextGeometricTransform(scaleX = 1.08f),
                             ),
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0-beta] - 2026-10-14
+
+### Added
+- **Flat & Shadowless UI:** Completely removed elevation and artificial drop shadows across bottom sheets, dialogs, track cards, menus, and settings.
+- **Cover Art Style Switcher:** Added "Cover art style" in Settings -> Appearance allowing users to choose between classic Banner and uncropped 1:1 Spotify-style Square art in both library grid and album/artist detail headers.
+- **Swipe-to-Queue:** Added bidirectional Spotify-style swipe gestures in Album and Playlist views with dynamic album palette accenting.
+- **Album Metadata Editor:** Added `EditAlbumSheet` for batch metadata editing (Album title, Album Artist, Artist, Genre, ReplayGain, and artwork).
+- **Disc Timing:** Added total album playback duration and per-disc duration calculation.
+
+### Changed
+- **Gradients & Dithering:** Replaced banded linear gradients with smooth $C^2$ quintic smootherstep scrims and hardware GPU dithering.
+- **Detail Header Layout:** Proportional 380dp square header with 215dp cover size ensuring zero overlap with two-line album/artist titles.
+- **Settings Reactivity:** Converted preference flows to eager sharing (`SharingStarted.Eagerly`) for instant UI synchronization.
+
 ## [0.7.5-beta] - 2026-06-13
 
 ### Added
