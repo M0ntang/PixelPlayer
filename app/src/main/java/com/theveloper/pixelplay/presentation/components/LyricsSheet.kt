@@ -859,7 +859,7 @@ fun LyricsSheet(
                         .align(Alignment.TopCenter)
                         .background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(containerColor, Color.Transparent)
+                                colors = listOf(containerColor, containerColor.copy(alpha = 0f))
                             )
                         )
                 )
@@ -872,7 +872,7 @@ fun LyricsSheet(
                         .align(Alignment.BottomCenter)
                         .background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, containerColor)
+                                colors = listOf(containerColor.copy(alpha = 0f), containerColor)
                             )
                         )
                 )

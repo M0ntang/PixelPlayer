@@ -31,10 +31,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -47,6 +52,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import com.theveloper.pixelplay.presentation.components.createSmoothHeaderScrim
+import com.theveloper.pixelplay.presentation.components.createSmoothStatusBarScrim
 import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToQueueBox
 import com.theveloper.pixelplay.utils.formatTotalDuration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -94,6 +101,7 @@ import coil.size.Size
 import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.model.Album
 import com.theveloper.pixelplay.presentation.components.CollapsibleCommonTopBar
+import com.theveloper.pixelplay.presentation.components.EditAlbumSheet
 import com.theveloper.pixelplay.presentation.components.ExpressiveScrollBar
 import com.theveloper.pixelplay.ui.theme.LocalShowScrollbar
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
@@ -130,6 +138,7 @@ fun AlbumDetailScreen(
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
 
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
+    var showEditAlbumSheet by remember { mutableStateOf(false) }
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
@@ -407,7 +416,8 @@ fun AlbumDetailScreen(
                                 if (songs.isNotEmpty()) {
                                     playerViewModel.showAndPlaySong(songs.first(), songs)
                                 }
-                            }
+                            },
+                            onEditClick = { showEditAlbumSheet = true }
                         )
                     } else {
                         CollapsingAlbumTopBar(
@@ -427,7 +437,8 @@ fun AlbumDetailScreen(
                                 if (songs.isNotEmpty()) {
                                     playerViewModel.showAndPlaySong(songs.first(), songs)
                                 }
-                            }
+                            },
+                            onEditClick = { showEditAlbumSheet = true }
                         )
                     }
                 }
@@ -527,6 +538,28 @@ fun AlbumDetailScreen(
                 }
             }
         }
+
+        if (showEditAlbumSheet && uiState.album != null) {
+            EditAlbumSheet(
+                visible = showEditAlbumSheet,
+                album = uiState.album!!,
+                songs = uiState.songs,
+                onDismiss = { showEditAlbumSheet = false },
+                onSave = { newTitle, newAlbumArtist, newArtist, newGenre, newReplayGainAlbumGainDb, coverArtUpdate, trackEdits ->
+                    playerViewModel.saveAlbumMetadata(
+                        album = uiState.album!!,
+                        trackEdits = trackEdits,
+                        newAlbumTitle = newTitle,
+                        newAlbumArtist = newAlbumArtist.takeIf { it.isNotBlank() },
+                        newArtist = newArtist.takeIf { it.isNotBlank() },
+                        newGenre = newGenre.takeIf { it.isNotBlank() },
+                        newReplayGainAlbumGainDb = newReplayGainAlbumGainDb.takeIf { it.isNotBlank() },
+                        coverArtUpdate = coverArtUpdate
+                    )
+                    showEditAlbumSheet = false
+                }
+            )
+        }
     }
 }
 
@@ -540,7 +573,8 @@ private fun SharedAlbumTopBarProbe(
     headerImageRequestSize: Size,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
-    onPlayClick: () -> Unit
+    onPlayClick: () -> Unit,
+    onEditClick: () -> Unit
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
@@ -549,17 +583,10 @@ private fun SharedAlbumTopBarProbe(
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedContentAlpha = 1f - solidAlpha
     val headerOverlayBrush = remember(surfaceColor, expandedContentAlpha) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                surfaceColor.copy(alpha = 0.22f * expandedContentAlpha),
-                surfaceColor.copy(alpha = 0.82f * expandedContentAlpha),
-                surfaceColor
-            )
-        )
+        createSmoothHeaderScrim(surfaceColor, expandedContentAlpha)
     }
     val statusBarBrush = remember(statusBarColor) {
-        Brush.verticalGradient(colors = listOf(statusBarColor, Color.Transparent))
+        createSmoothStatusBarScrim(statusBarColor)
     }
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
@@ -622,7 +649,7 @@ private fun SharedAlbumTopBarProbe(
             containerColor = surfaceColor.copy(alpha = solidAlpha),
             collapsedTitleStartPadding = 68.dp,
             expandedTitleStartPadding = 24.dp,
-            collapsedTitleEndPadding = 24.dp,
+            collapsedTitleEndPadding = 112.dp,
             expandedTitleEndPadding = 136.dp,
             containerHeightRange = 112.dp to 56.dp,
             titleStyle = MaterialTheme.typography.headlineMedium.copy(
@@ -638,7 +665,55 @@ private fun SharedAlbumTopBarProbe(
             contentColor = MaterialTheme.colorScheme.onSurface,
             subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant,
             fadeSubtitleOnCollapse = false,
-            syncStatusBarWithContainer = false
+            syncStatusBarWithContainer = false,
+            actions = {
+                var showMenu by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.padding(end = 12.dp, top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilledIconButton(
+                        onClick = onEditClick,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = stringResource(R.string.edit_album_title)
+                        )
+                    }
+                    Box {
+                        FilledIconButton(
+                            onClick = { showMenu = true },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = stringResource(R.string.edit_album_title)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.edit_album_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Rounded.Edit, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onEditClick()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
         )
 
         LargeExtendedFloatingActionButton(
@@ -675,7 +750,8 @@ private fun CollapsingAlbumTopBar(
     headerImageRequestSize: Size,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
-    onPlayClick: () -> Unit
+    onPlayClick: () -> Unit,
+    onEditClick: () -> Unit
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
@@ -689,22 +765,10 @@ private fun CollapsingAlbumTopBar(
     val headerContentAlpha = 1f - (collapseFraction * 2).coerceAtMost(1f)
     val showExpandedArtwork = headerContentAlpha > 0.01f
     val headerOverlayBrush = remember(surfaceColor, headerContentAlpha) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                surfaceColor.copy(alpha = 0.30f * headerContentAlpha),
-                surfaceColor.copy(alpha = 0.90f * headerContentAlpha),
-                surfaceColor.copy(alpha = headerContentAlpha)
-            )
-        )
+        createSmoothHeaderScrim(surfaceColor, headerContentAlpha)
     }
     val statusBarBrush = remember(statusBarColor) {
-        Brush.verticalGradient(
-            colors = listOf(
-                statusBarColor,
-                Color.Transparent
-            )
-        )
+        createSmoothStatusBarScrim(statusBarColor)
     }
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
@@ -778,6 +842,55 @@ private fun CollapsingAlbumTopBar(
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
                     Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                }
+
+                var showMenu by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 12.dp, top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilledIconButton(
+                        onClick = onEditClick,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = stringResource(R.string.edit_album_title)
+                        )
+                    }
+                    Box {
+                        FilledIconButton(
+                            onClick = { showMenu = true },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = stringResource(R.string.edit_album_title)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.edit_album_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Rounded.Edit, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onEditClick()
+                                }
+                            )
+                        }
+                    }
                 }
 
                 Box(

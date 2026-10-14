@@ -590,7 +590,7 @@ private fun BatchCoverArtEditorCard(
                             .background(
                                 Brush.verticalGradient(
                                     listOf(
-                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0f),
                                         MaterialTheme.colorScheme.surface.copy(alpha = 0.25f),
                                     )
                                 )

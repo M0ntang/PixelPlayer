@@ -389,7 +389,7 @@ fun ReorderPresetsSheet(
                                 .background(
                                     brush = Brush.verticalGradient(
                                         listOf(
-                                            Color.Transparent,
+                                            MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0f),
                                             MaterialTheme.colorScheme.surfaceContainerLow
                                         )
                                     )

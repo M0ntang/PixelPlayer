@@ -1718,6 +1718,7 @@ fun LibraryScreen(
                 }
             }
             //Grad box
+            val bottomFadeColor = MaterialTheme.colorScheme.surfaceContainerLowest
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1726,10 +1727,10 @@ fun LibraryScreen(
                     .background(
                         brush = Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.2f to Color.Transparent,
-                                0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
-                                1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
+                                0.0f to bottomFadeColor.copy(alpha = 0f),
+                                0.2f to bottomFadeColor.copy(alpha = 0f),
+                                0.8f to bottomFadeColor,
+                                1.0f to bottomFadeColor
                             )
                         )
                     )
@@ -3420,7 +3421,7 @@ fun AlbumGridItemRedesigned(
                                     remember(gradientBaseColor) { // Recordar el Brush
                                         Brush.verticalGradient(
                                             colors = listOf(
-                                                Color.Transparent, gradientBaseColor
+                                                gradientBaseColor.copy(alpha = 0f), gradientBaseColor
                                             )
                                         )
                                     })

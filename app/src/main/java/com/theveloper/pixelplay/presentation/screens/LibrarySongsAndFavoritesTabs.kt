@@ -498,7 +498,8 @@ fun LibrarySongsTabPaginated(
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.surface, Color.Transparent
+                                    MaterialTheme.colorScheme.surface,
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0f)
                                 )
                             )
                         )

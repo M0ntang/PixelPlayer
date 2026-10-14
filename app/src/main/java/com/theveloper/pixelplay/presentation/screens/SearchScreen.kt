@@ -286,12 +286,13 @@ fun SearchScreen(
     }
     val colorScheme = MaterialTheme.colorScheme
     val bottomGradientBrush = remember(colorScheme.surfaceContainerLowest) {
+        val lowest = colorScheme.surfaceContainerLowest
         Brush.verticalGradient(
             colorStops = arrayOf(
-                0.0f to Color.Transparent,
-                0.2f to Color.Transparent,
-                0.8f to colorScheme.surfaceContainerLowest,
-                1.0f to colorScheme.surfaceContainerLowest
+                0.0f to lowest.copy(alpha = 0f),
+                0.2f to lowest.copy(alpha = 0f),
+                0.8f to lowest,
+                1.0f to lowest
             )
         )
     }

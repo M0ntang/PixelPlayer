@@ -698,7 +698,7 @@ private fun EditSongContent(
 }
 
 @Composable
-private fun CoverArtEditorCard(
+internal fun CoverArtEditorCard(
     modifier: Modifier = Modifier,
     albumArtUri: String?,
     preview: ImageBitmap?,
@@ -792,7 +792,7 @@ private fun CoverArtEditorCard(
                             .background(
                                 Brush.verticalGradient(
                                     listOf(
-                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0f),
                                         MaterialTheme.colorScheme.surface.copy(alpha = 0.25f),
                                     )
                                 )

@@ -1029,14 +1029,15 @@ fun QueueBottomSheet(
                     enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 }),
                     exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 3 }),
                 ) {
+                    val scrimColor = MaterialTheme.colorScheme.surfaceContainerLowest
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
                                 brush = Brush.verticalGradient(
                                     listOf(
-                                        Color.Transparent,
-                                        MaterialTheme.colorScheme.surfaceContainerLowest
+                                        scrimColor.copy(alpha = 0f),
+                                        scrimColor
                                     )
                                 )
                             )

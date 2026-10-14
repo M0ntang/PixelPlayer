@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp as lerpColor
+import com.theveloper.pixelplay.presentation.components.createSmoothHeaderScrim
+import com.theveloper.pixelplay.presentation.components.createSmoothStatusBarScrim
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -748,17 +750,10 @@ private fun SharedArtistTopBarProbe(
     val expandedContentAlpha = 1f - solidAlpha
     val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
     val headerOverlayBrush = remember(surfaceColor, expandedContentAlpha) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                surfaceColor.copy(alpha = 0.24f * expandedContentAlpha),
-                surfaceColor.copy(alpha = 0.84f * expandedContentAlpha),
-                surfaceColor
-            )
-        )
+        createSmoothHeaderScrim(surfaceColor, expandedContentAlpha)
     }
     val statusBarBrush = remember(statusBarColor) {
-        Brush.verticalGradient(colors = listOf(statusBarColor, Color.Transparent))
+        createSmoothStatusBarScrim(statusBarColor)
     }
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
@@ -928,22 +923,10 @@ private fun CustomCollapsingTopBar(
     val headerContentAlpha = 1f - (collapseFraction * 2).coerceAtMost(1f)
     val showExpandedArtwork = headerContentAlpha > 0.01f
     val headerOverlayBrush = remember(surfaceColor, headerContentAlpha) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                surfaceColor.copy(alpha = 0.30f * headerContentAlpha),
-                surfaceColor.copy(alpha = 0.90f * headerContentAlpha),
-                surfaceColor.copy(alpha = headerContentAlpha)
-            )
-        )
+        createSmoothHeaderScrim(surfaceColor, headerContentAlpha)
     }
     val statusBarBrush = remember(statusBarColor) {
-        Brush.verticalGradient(
-            colors = listOf(
-                statusBarColor,
-                Color.Transparent
-            )
-        )
+        createSmoothStatusBarScrim(statusBarColor)
     }
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {

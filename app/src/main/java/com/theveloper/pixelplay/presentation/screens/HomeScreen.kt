@@ -494,6 +494,7 @@ fun HomeScreen(
                 }
             }
         }
+        val bottomFadeColor = MaterialTheme.colorScheme.surfaceContainerLowest
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -502,10 +503,10 @@ fun HomeScreen(
                 .background(
                     brush = Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0.0f to Color.Transparent,
-                            0.2f to Color.Transparent,
-                            0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
-                            1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
+                            0.0f to bottomFadeColor.copy(alpha = 0f),
+                            0.2f to bottomFadeColor.copy(alpha = 0f),
+                            0.8f to bottomFadeColor,
+                            1.0f to bottomFadeColor
                         )
                     )
                 )

@@ -214,6 +214,7 @@ fun PlaylistContainer(
                 }
             }
 
+            val surfaceColor = MaterialTheme.colorScheme.surface
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -221,8 +222,8 @@ fun PlaylistContainer(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                MaterialTheme.colorScheme.surface,
-                                Color.Transparent
+                                surfaceColor,
+                                surfaceColor.copy(alpha = 0f)
                             )
                         )
                     )
