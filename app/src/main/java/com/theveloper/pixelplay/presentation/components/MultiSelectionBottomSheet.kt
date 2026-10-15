@@ -255,7 +255,7 @@ fun MultiSelectionBottomSheet(
                         ) {
                             FilledTonalButton(
                                 modifier = Modifier
-                                    .weight(0.5f)
+                                    .weight(0.56f)
                                     .heightIn(min = 80.dp),
                                 colors = ButtonDefaults.filledTonalButtonColors(
                                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -277,9 +277,9 @@ fun MultiSelectionBottomSheet(
                                     text = stringResource(R.string.song_info_action_play_all),
                                     modifier = Modifier.padding(end = 4.dp),
                                     overflow = TextOverflow.Ellipsis,
-                                    maxLines = 2,
-                                    lineHeight = 22.sp,
-                                    style = MaterialTheme.typography.titleLarge
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.titleMedium
                                 )
                             }
                             // Like/Unlike toggle button
@@ -287,7 +287,7 @@ fun MultiSelectionBottomSheet(
                             // If any is not liked -> clicking will like all
                             FilledIconButton(
                                 modifier = Modifier
-                                    .weight(0.25f)
+                                    .weight(0.22f)
                                     .fillMaxHeight(),
                                 onClick = {
                                     onToggleLikeAll(!allAreLiked) // true = like all, false = unlike all
@@ -313,7 +313,7 @@ fun MultiSelectionBottomSheet(
                             
                             FilledTonalIconButton(
                                 modifier = Modifier
-                                    .weight(0.25f)
+                                    .weight(0.22f)
                                     .fillMaxHeight(),
                                 colors = IconButtonDefaults.filledIconButtonColors(
                                     containerColor = MaterialTheme.colorScheme.secondary,
@@ -345,7 +345,7 @@ fun MultiSelectionBottomSheet(
                         ) {
                             FilledTonalButton(
                                 modifier = Modifier
-                                    .weight(0.6f)
+                                    .weight(0.5f)
                                     .heightIn(min = 66.dp),
                                 colors = ButtonDefaults.filledTonalButtonColors(
                                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -367,14 +367,15 @@ fun MultiSelectionBottomSheet(
                                     text = stringResource(R.string.song_info_action_add_to_queue),
                                     modifier = Modifier.padding(end = 4.dp),
                                     overflow = TextOverflow.Ellipsis,
-                                    maxLines = 2,
-                                    lineHeight = 20.sp
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.titleSmall
                                 )
                             }
                             
                             FilledTonalButton(
                                 modifier = Modifier
-                                    .weight(0.4f)
+                                    .weight(0.5f)
                                     .heightIn(min = 66.dp),
                                 colors = ButtonDefaults.filledTonalButtonColors(
                                     containerColor = MaterialTheme.colorScheme.tertiary,
@@ -396,8 +397,9 @@ fun MultiSelectionBottomSheet(
                                     text = stringResource(R.string.song_info_action_queue_next),
                                     modifier = Modifier.padding(end = 4.dp),
                                     overflow = TextOverflow.Ellipsis,
-                                    maxLines = 2,
-                                    lineHeight = 20.sp
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.titleSmall
                                 )
                             }
                         }
@@ -436,8 +438,9 @@ fun MultiSelectionBottomSheet(
                                     text = stringResource(R.string.common_playlist),
                                     modifier = Modifier.padding(end = 4.dp),
                                     overflow = TextOverflow.Ellipsis,
-                                    maxLines = 2,
-                                    lineHeight = 20.sp
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.titleSmall
                                 )
                             }
                             
@@ -455,7 +458,7 @@ fun MultiSelectionBottomSheet(
                                     val activity = (context as? Activity)
                                     if (activity != null) {
                                         onDeleteAll(activity) { success ->
-                                            if (success) onDismiss()
+                                             if (success) onDismiss()
                                         }
                                     }
                                 }
@@ -469,8 +472,9 @@ fun MultiSelectionBottomSheet(
                                     text = stringResource(R.string.song_info_action_delete_all),
                                     modifier = Modifier.padding(end = 4.dp),
                                     overflow = TextOverflow.Ellipsis,
-                                    maxLines = 2,
-                                    lineHeight = 20.sp
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.titleSmall
                                 )
                             }
                         }

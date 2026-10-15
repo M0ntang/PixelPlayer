@@ -33,7 +33,20 @@ interface MusicRepository {
     fun getPaginatedAlbums(
         sortOption: com.theveloper.pixelplay.data.model.SortOption,
         storageFilter: com.theveloper.pixelplay.data.model.StorageFilter = com.theveloper.pixelplay.data.model.StorageFilter.ALL,
-        minTracks: Int = 1
+        minTracks: Int = 1,
+        excludeSingles: Boolean = true,
+        singlesMaxTracks: Int = 3,
+        singlesMaxDurationMs: Long = 600000L
+    ): Flow<PagingData<Album>>
+
+    /**
+     * Returns paginated singles for efficient display in library tabs.
+     */
+    fun getPaginatedSingles(
+        sortOption: com.theveloper.pixelplay.data.model.SortOption,
+        storageFilter: com.theveloper.pixelplay.data.model.StorageFilter = com.theveloper.pixelplay.data.model.StorageFilter.ALL,
+        maxTracks: Int = 3,
+        maxDurationMs: Long = 600000L
     ): Flow<PagingData<Album>>
 
     /**
@@ -139,8 +152,17 @@ interface MusicRepository {
      */
     fun getAlbums(
         storageFilter: com.theveloper.pixelplay.data.model.StorageFilter = com.theveloper.pixelplay.data.model.StorageFilter.ALL,
-        minTracks: Int = 1
+        minTracks: Int = 1,
+        excludeSingles: Boolean = true,
+        singlesMaxTracks: Int = 3,
+        singlesMaxDurationMs: Long = 600000L
     ): Flow<List<Album>> // Existing Flow for reactive updates
+
+    fun getSingles(
+        storageFilter: com.theveloper.pixelplay.data.model.StorageFilter = com.theveloper.pixelplay.data.model.StorageFilter.ALL,
+        maxTracks: Int = 3,
+        maxDurationMs: Long = 600000L
+    ): Flow<List<Album>>
 
     /**
      * Obtiene la lista de artistas filtrada.

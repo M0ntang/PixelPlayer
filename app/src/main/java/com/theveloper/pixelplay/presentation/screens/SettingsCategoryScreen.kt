@@ -88,6 +88,7 @@ import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.UnfoldMore
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ButtonDefaults
@@ -212,6 +213,7 @@ fun SettingsCategoryScreen(
     val toastDailyMixRegenerationStarted = stringResource(R.string.settings_toast_daily_mix_regeneration_started)
     val toastStatsRegenerationStarted = stringResource(R.string.settings_toast_stats_regeneration_started)
     val backupFileNameFormat = stringResource(R.string.settings_backup_file_name_format)
+    val durationMinutesFormat = stringResource(R.string.duration_minutes_format)
     
     // State Collection (Duplicated from SettingsScreen for now to ensure functionality)
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
@@ -240,6 +242,7 @@ fun SettingsCategoryScreen(
     var syncIndicatorLabel by remember { mutableStateOf<String?>(null) }
     var showClearLyricsDialog by remember { mutableStateOf(false) }
     var showRebuildDatabaseWarning by remember { mutableStateOf(false) }
+    var showResetHiddenAlbumsDialog by remember { mutableStateOf(false) }
     var showRegenerateDailyMixDialog by remember { mutableStateOf(false) }
     var showRegenerateStatsDialog by remember { mutableStateOf(false) }
     var showRegenerateAllPalettesDialog by remember { mutableStateOf(false) }
@@ -252,6 +255,12 @@ fun SettingsCategoryScreen(
     }
     var minTracksPerAlbumDraft by remember(uiState.minTracksPerAlbum) {
         mutableStateOf(uiState.minTracksPerAlbum.toFloat())
+    }
+    var maxTracksPerSingleDraft by remember(uiState.maxTracksPerSingle) {
+        mutableStateOf(uiState.maxTracksPerSingle.toFloat())
+    }
+    var maxSingleDurationMinutesDraft by remember(uiState.maxSingleDurationMinutes) {
+        mutableStateOf(uiState.maxSingleDurationMinutes.toFloat())
     }
     var albumArtCacheLimitDraft by remember(uiState.albumArtCacheLimitMb) {
         mutableStateOf(uiState.albumArtCacheLimitMb.toFloat())
@@ -470,6 +479,48 @@ fun SettingsCategoryScreen(
                                     },
                                     valueText = { value -> "${value.toInt()}" }
                                 )
+                                SliderSettingsItem(
+                                    label = stringResource(R.string.settings_max_tracks_per_single),
+                                    value = maxTracksPerSingleDraft,
+                                    valueRange = 1f..10f,
+                                    steps = 8, // 1, 2, ... 10
+                                    onValueChange = { maxTracksPerSingleDraft = it },
+                                    onValueChangeFinished = {
+                                        val selectedTracks = maxTracksPerSingleDraft.toInt()
+                                        if (selectedTracks != uiState.maxTracksPerSingle) {
+                                            settingsViewModel.setMaxTracksPerSingle(selectedTracks)
+                                        }
+                                    },
+                                    valueText = { value -> "${value.toInt()}" }
+                                )
+                                SliderSettingsItem(
+                                    label = stringResource(R.string.settings_max_single_duration),
+                                    value = maxSingleDurationMinutesDraft,
+                                    valueRange = 1f..30f,
+                                    steps = 28, // 1, 2, ... 30 minutes
+                                    onValueChange = { maxSingleDurationMinutesDraft = it },
+                                    onValueChangeFinished = {
+                                        val selectedMinutes = maxSingleDurationMinutesDraft.toInt()
+                                        if (selectedMinutes != uiState.maxSingleDurationMinutes) {
+                                            settingsViewModel.setMaxSingleDurationMinutes(selectedMinutes)
+                                        }
+                                    },
+                                    valueText = { value -> context.getString(R.string.duration_minutes_format, value.toInt()) }
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.settings_exclude_singles_from_albums),
+                                    subtitle = stringResource(R.string.settings_exclude_singles_from_albums_subtitle),
+                                    checked = uiState.excludeSinglesFromAlbums,
+                                    onCheckedChange = { settingsViewModel.setExcludeSinglesFromAlbums(it) }
+                                )
+                                if (uiState.hiddenAlbumCount > 0) {
+                                    SettingsItem(
+                                        title = stringResource(R.string.settings_hidden_albums_title),
+                                        subtitle = stringResource(R.string.settings_hidden_albums_subtitle, uiState.hiddenAlbumCount),
+                                        leadingIcon = { Icon(Icons.Rounded.VisibilityOff, null, tint = MaterialTheme.colorScheme.secondary) },
+                                        onClick = { showResetHiddenAlbumsDialog = true }
+                                    )
+                                }
                                 SliderSettingsItem(
                                     label = stringResource(R.string.settings_album_art_cache_limit),
                                     value = albumArtCacheLimitDraft,
@@ -704,6 +755,16 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_rounded_corner_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     onClick = { navController.navigateSafely("nav_bar_corner_radius") }
+                                )
+                            }
+
+                            SettingsSubsection(title = stringResource(R.string.settings_song_menu_section)) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.settings_song_menu_icons_only_title),
+                                    subtitle = stringResource(R.string.settings_song_menu_icons_only_subtitle),
+                                    checked = uiState.songMenuIconsOnly,
+                                    onCheckedChange = { settingsViewModel.setSongMenuIconsOnly(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.MoreVert, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
                             }
 
@@ -1705,6 +1766,32 @@ fun SettingsCategoryScreen(
                 } 
             },
             dismissButton = { TextButton(onClick = { showRebuildDatabaseWarning = false }) { Text(stringResource(R.string.common_cancel), maxLines = 1, overflow = TextOverflow.Ellipsis) } }
+        )
+    }
+
+    if (showResetHiddenAlbumsDialog) {
+        val toastRestored = stringResource(R.string.settings_toast_hidden_albums_restored)
+        AlertDialog(
+            icon = { Icon(Icons.Rounded.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text(stringResource(R.string.settings_dialog_reset_hidden_albums_title)) },
+            text = { Text(stringResource(R.string.settings_dialog_reset_hidden_albums_body, uiState.hiddenAlbumCount)) },
+            onDismissRequest = { showResetHiddenAlbumsDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showResetHiddenAlbumsDialog = false
+                        settingsViewModel.clearHiddenAlbums()
+                        Toast.makeText(context, toastRestored, Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text(stringResource(R.string.settings_dialog_reset_hidden_albums_confirm), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetHiddenAlbumsDialog = false }) {
+                    Text(stringResource(R.string.common_cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
         )
     }
 

@@ -92,7 +92,8 @@ fun LibraryAlbumsTab(
     onAlbumLongPress: (Album) -> Unit = {},
     onAlbumSelectionToggle: (Album) -> Unit = {},
     getSelectionIndex: (Long) -> Int? = { null },
-    storageFilter: StorageFilter = StorageFilter.ALL
+    storageFilter: StorageFilter = StorageFilter.ALL,
+    tabId: LibraryTabId = LibraryTabId.ALBUMS
 ) {
     val hasCurrentSong by remember(playerViewModel) {
         playerViewModel.stablePlayerState
@@ -304,7 +305,7 @@ fun LibraryAlbumsTab(
 
         albums.itemCount == 0 && refreshState is LoadState.NotLoading -> {
             LibraryExpressiveEmptyState(
-                tabId = LibraryTabId.ALBUMS,
+                tabId = tabId,
                 storageFilter = storageFilter,
                 bottomBarHeight = bottomBarHeight
             )

@@ -30,6 +30,7 @@ class LibraryTabsStateHolder @Inject constructor() {
         scope: CoroutineScope,
         loadSongs: () -> Unit,
         loadAlbums: () -> Unit,
+        loadSingles: () -> Unit = {},
         loadArtists: () -> Unit,
         loadFolders: () -> Unit
     ) {
@@ -56,6 +57,7 @@ class LibraryTabsStateHolder @Inject constructor() {
                 when (tabId) {
                     LibraryTabId.SONGS -> loadSongs()
                     LibraryTabId.ALBUMS -> loadAlbums()
+                    LibraryTabId.SINGLES -> loadSingles()
                     LibraryTabId.ARTISTS -> loadArtists()
                     LibraryTabId.FOLDERS -> loadFolders()
                     else -> Unit

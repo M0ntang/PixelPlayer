@@ -9,6 +9,7 @@
     <!-- Library Tab Names -->
     <string name="library_tab_songs">Песни</string>
     <string name="library_tab_albums">Альбомы</string>
+    <string name="library_tab_singles">Синглы</string>
     <string name="library_tab_artists">Исполнители</string>
     <string name="library_tab_playlists">Плейлисты</string>
     <string name="library_tab_folders">Папки</string>
@@ -105,6 +106,12 @@
     <string name="library_empty_albums_offline_subtitle">Для создания локальных альбомов необходимы локальные треки.</string>
     <string name="library_empty_albums_online_title">Облачные альбомы не найдены</string>
     <string name="library_empty_albums_online_subtitle">Облачные треки с данными альбомов появятся здесь после синхронизации.</string>
+    <string name="library_empty_singles_all_title">Нет доступных синглов</string>
+    <string name="library_empty_singles_all_subtitle">Синглы, подходящие под ваши критерии, появятся здесь.</string>
+    <string name="library_empty_singles_offline_title">Локальные синглы не найдены</string>
+    <string name="library_empty_singles_offline_subtitle">Локальные синглы по текущим критериям не найдены.</string>
+    <string name="library_empty_singles_online_title">Облачные синглы не найдены</string>
+    <string name="library_empty_singles_online_subtitle">Облачные синглы по текущим критериям не найдены.</string>
     <string name="library_empty_artists_all_title">Нет доступных исполнителей</string>
     <string name="library_empty_artists_all_subtitle">Исполнители появятся после индексации треков из любого источника.</string>
     <string name="library_empty_artists_offline_title">Локальные исполнители не найдены</string>
@@ -124,9 +131,9 @@
 
     <!-- SongInfoBottomSheet, MultiSelectionBottomSheet, PlaylistMultiSelectionBottomSheet -->
     <string name="song_info_cd_edit_metadata">Редактировать теги трека</string>
-    <string name="song_info_action_play">Воспроизвести</string>
+    <string name="song_info_action_play">Слушать</string>
     <string name="song_info_cd_play">Воспроизвести трек</string>
-    <string name="song_info_action_play_all">Воспроизвести всё</string>
+    <string name="song_info_action_play_all">Слушать всё</string>
     <string name="song_info_cd_play_all">Воспроизвести всё</string>
     <string name="song_info_cd_add_to_favorites">Добавить в избранное</string>
     <string name="song_info_cd_add_to_favorites_all">Добавить всё в избранное</string>
@@ -136,9 +143,9 @@
     <string name="song_info_cd_share_song_file">Поделиться аудиофайлом</string>
     <string name="song_info_cd_share_all_as_zip">Поделиться всем как ZIP</string>
     <string name="song_info_error_share_song">Не удалось поделиться треком: %1$s</string>
-    <string name="song_info_action_add_to_queue">Добавить в очередь</string>
+    <string name="song_info_action_add_to_queue">В очередь</string>
     <string name="song_info_cd_add_to_queue">Добавить в очередь</string>
-    <string name="song_info_action_queue_next">Следующий</string>
+    <string name="song_info_action_queue_next">Далее</string>
     <string name="song_info_cd_queue_next">Воспроизвести следующим</string>
     <string name="song_info_cd_add_to_playlist">Добавить в плейлист</string>
     <string name="song_info_action_delete">Удалить</string>
@@ -151,7 +158,7 @@
     <string name="song_info_watch_unavailable">Часы недоступны</string>
     <string name="song_info_cd_send_to_watch">Отправить трек на часы</string>
     <string name="song_info_cd_watch_unavailable">Часы недоступны</string>
-    <string name="song_info_set_sound_as_short">Установить как</string>
+    <string name="song_info_set_sound_as_short">Рингтон</string>
     <string name="song_info_set_sound_as_long">Установить как звук</string>
     <string name="song_info_cd_set_sound_as">Выберите, как использовать этот трек в качестве системного звука</string>
     <string name="song_info_tone_picker_title">Использовать этот трек как</string>
@@ -193,6 +200,9 @@
     <string name="multi_selection_albums_selected">выбрано</string>
     <string name="multi_selection_albums_selected_limit">Лимит: %1$d альбомов за одно выделение.</string>
     <string name="multi_selection_albums_queue_hint">Очередь + воспроизведение сохраняют порядок вашего выбора.</string>
+    <string name="album_action_hide_from_albums">Скрыть из альбомов</string>
+    <string name="album_toast_hidden_from_albums_singular">Альбом скрыт из альбомов</string>
+    <string name="album_toast_hidden_from_albums_plural">Скрыто альбомов: %1$d</string>
     <string name="multi_selection_genres_count_upper">%1$d ЖАНРОВ</string>
     <string name="multi_selection_genres_selected">выбрано</string>
     <string name="multi_selection_genres_queue_hint">Выполняйте пакетные операции для всех треков в этих жанрах.</string>
@@ -251,10 +261,12 @@
 
     <!-- ReorderTabsSheet-->
     <string name="reorder_tabs_sheet_title">Изменить порядок вкладок библиотеки</string>
+    <string name="reorder_tabs_sheet_subtitle">Перетаскивайте вкладки для изменения порядка и отключайте ненужные.</string>
     <string name="reorder_tabs_reset_dialog_title">Сбросить порядок</string>
-    <string name="reorder_tabs_reset_dialog_body">Сбросить порядок вкладок к значениям по умолчанию?</string>
+    <string name="reorder_tabs_reset_dialog_body">Сбросить порядок и видимость вкладок к значениям по умолчанию?</string>
     <string name="reorder_tabs_reordering">Изменение порядка вкладок…</string>
     <string name="reorder_tabs_cd_drag_handle">Маркер перетаскивания</string>
+    <string name="reorder_tabs_min_tabs_warning">По крайней мере одна вкладка должна быть включена.</string>
 
     <!-- PlayerArtistPickerBottomSheet -->
     <string name="artist_picker_title">Выберите исполнителя</string>

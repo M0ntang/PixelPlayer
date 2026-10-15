@@ -9,6 +9,7 @@
     <!-- Library Tab Names -->
     <string name="library_tab_songs">Canciones</string>
     <string name="library_tab_albums">Álbumes</string>
+    <string name="library_tab_singles">Sencillos</string>
     <string name="library_tab_artists">Artistas</string>
     <string name="library_tab_playlists">Listas</string>
     <string name="library_tab_folders">Carpetas</string>
@@ -193,6 +194,9 @@
     <string name="multi_selection_albums_selected">seleccionados</string>
     <string name="multi_selection_albums_selected_limit">Límite: %1$d álbumes por selección.</string>
     <string name="multi_selection_albums_queue_hint">La cola y reproducción respetan el orden de selección.</string>
+    <string name="album_action_hide_from_albums">Ocultar de álbumes</string>
+    <string name="album_toast_hidden_from_albums_singular">Álbum oculto de álbumes</string>
+    <string name="album_toast_hidden_from_albums_plural">%1$d álbumes ocultos de álbumes</string>
     <string name="multi_selection_genres_count_upper">%1$d GÉNEROS</string>
     <string name="multi_selection_genres_selected">seleccionados</string>
     <string name="multi_selection_genres_queue_hint">Realizar operaciones por lotes en todas las canciones de estos géneros.</string>

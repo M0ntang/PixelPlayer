@@ -58,6 +58,9 @@ class LibraryStateHolder @Inject constructor(
     private val _albums = MutableStateFlow<ImmutableList<Album>>(persistentListOf())
     val albums = _albums.asStateFlow()
 
+    private val _singles = MutableStateFlow<ImmutableList<Album>>(persistentListOf())
+    val singles = _singles.asStateFlow()
+
     private val _artists = MutableStateFlow<ImmutableList<Artist>>(persistentListOf())
     val artists = _artists.asStateFlow()
 
@@ -113,6 +116,9 @@ class LibraryStateHolder @Inject constructor(
     private val _currentAlbumSortOption = MutableStateFlow<SortOption>(SortOption.AlbumTitleAZ)
     val currentAlbumSortOption = _currentAlbumSortOption.asStateFlow()
 
+    private val _currentSingleSortOption = MutableStateFlow<SortOption>(SortOption.AlbumTitleAZ)
+    val currentSingleSortOption = _currentSingleSortOption.asStateFlow()
+
     private val _currentArtistSortOption = MutableStateFlow<SortOption>(SortOption.ArtistNameAZ)
     val currentArtistSortOption = _currentArtistSortOption.asStateFlow()
 
@@ -122,16 +128,79 @@ class LibraryStateHolder @Inject constructor(
     private val _currentFavoriteSortOption = MutableStateFlow<SortOption>(SortOption.LikedSongDateLiked)
     val currentFavoriteSortOption = _currentFavoriteSortOption.asStateFlow()
 
+    private data class AlbumQueryCriteria(
+        val minTracks: Int,
+        val excludeSingles: Boolean,
+        val singlesMaxTracks: Int,
+        val singlesMaxDurationMs: Long
+    )
+
+    private val albumCriteriaFlow: kotlinx.coroutines.flow.Flow<AlbumQueryCriteria> =
+        kotlinx.coroutines.flow.combine(
+            userPreferencesRepository.minTracksPerAlbumFlow,
+            userPreferencesRepository.excludeSinglesFromAlbumsFlow,
+            userPreferencesRepository.maxTracksPerSingleFlow,
+            userPreferencesRepository.maxSingleDurationMinutesFlow
+        ) { minTracks, excludeSingles, maxTracks, maxDurationMinutes ->
+            AlbumQueryCriteria(
+                minTracks = minTracks,
+                excludeSingles = excludeSingles,
+                singlesMaxTracks = maxTracks,
+                singlesMaxDurationMs = maxDurationMinutes * 60_000L
+            )
+        }
+
+    private data class SinglesQueryCriteria(
+        val maxTracks: Int,
+        val maxDurationMs: Long
+    )
+
+    private val singlesCriteriaFlow: kotlinx.coroutines.flow.Flow<SinglesQueryCriteria> =
+        kotlinx.coroutines.flow.combine(
+            userPreferencesRepository.maxTracksPerSingleFlow,
+            userPreferencesRepository.maxSingleDurationMinutesFlow
+        ) { maxTracks, maxDurationMinutes ->
+            SinglesQueryCriteria(
+                maxTracks = maxTracks,
+                maxDurationMs = maxDurationMinutes * 60_000L
+            )
+        }
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val albumsPagingFlow: kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Album>> =
         kotlinx.coroutines.flow.combine(
             _currentAlbumSortOption,
             effectiveStorageFilter,
-            userPreferencesRepository.minTracksPerAlbumFlow
-        ) { sort, filter, minTracks ->
-            Triple(sort, filter, minTracks)
-        }.flatMapLatest { (sortOption, filter, minTracks) ->
-            musicRepository.getPaginatedAlbums(sortOption, filter, minTracks)
+            albumCriteriaFlow
+        ) { sort, filter, criteria ->
+            Triple(sort, filter, criteria)
+        }.flatMapLatest { (sortOption, filter, criteria) ->
+            musicRepository.getPaginatedAlbums(
+                sortOption = sortOption,
+                storageFilter = filter,
+                minTracks = criteria.minTracks,
+                excludeSingles = criteria.excludeSingles,
+                singlesMaxTracks = criteria.singlesMaxTracks,
+                singlesMaxDurationMs = criteria.singlesMaxDurationMs
+            )
+        }
+        .flowOn(Dispatchers.IO)
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val singlesPagingFlow: kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Album>> =
+        kotlinx.coroutines.flow.combine(
+            _currentSingleSortOption,
+            effectiveStorageFilter,
+            singlesCriteriaFlow
+        ) { sort, filter, criteria ->
+            Triple(sort, filter, criteria)
+        }.flatMapLatest { (sortOption, filter, criteria) ->
+            musicRepository.getPaginatedSingles(
+                sortOption = sortOption,
+                storageFilter = filter,
+                maxTracks = criteria.maxTracks,
+                maxDurationMs = criteria.maxDurationMs
+            )
         }
         .flowOn(Dispatchers.IO)
 
@@ -209,6 +278,9 @@ class LibraryStateHolder @Inject constructor(
             val albumSortKey = userPreferencesRepository.albumsSortOptionFlow.first()
             _currentAlbumSortOption.value = SortOption.ALBUMS.find { it.storageKey == albumSortKey } ?: SortOption.AlbumTitleAZ
 
+            val singleSortKey = userPreferencesRepository.singlesSortOptionFlow.first()
+            _currentSingleSortOption.value = SortOption.ALBUMS.find { it.storageKey == singleSortKey } ?: SortOption.AlbumTitleAZ
+
             val artistSortKey = userPreferencesRepository.artistsSortOptionFlow.first()
             _currentArtistSortOption.value = SortOption.ARTISTS.find { it.storageKey == artistSortKey } ?: SortOption.ArtistNameAZ
 
@@ -236,6 +308,7 @@ class LibraryStateHolder @Inject constructor(
 
     private var songsJob: Job? = null
     private var albumsJob: Job? = null
+    private var singlesJob: Job? = null
     private var artistsJob: Job? = null
     private var foldersJob: Job? = null
     @Volatile
@@ -245,6 +318,7 @@ class LibraryStateHolder @Inject constructor(
         if (
             songsJob?.isActive == true &&
             albumsJob?.isActive == true &&
+            singlesJob?.isActive == true &&
             artistsJob?.isActive == true &&
             foldersJob?.isActive == true
         ) {
@@ -277,17 +351,44 @@ class LibraryStateHolder @Inject constructor(
             @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
             kotlinx.coroutines.flow.combine(
                 effectiveStorageFilter,
-                userPreferencesRepository.minTracksPerAlbumFlow
-            ) { filter, minTracks ->
-                filter to minTracks
-            }.flatMapLatest { (filter, minTracks) ->
-                musicRepository.getAlbums(filter, minTracks)
+                albumCriteriaFlow
+            ) { filter, criteria ->
+                filter to criteria
+            }.flatMapLatest { (filter, criteria) ->
+                musicRepository.getAlbums(
+                    storageFilter = filter,
+                    minTracks = criteria.minTracks,
+                    excludeSingles = criteria.excludeSingles,
+                    singlesMaxTracks = criteria.singlesMaxTracks,
+                    singlesMaxDurationMs = criteria.singlesMaxDurationMs
+                )
             }.conflate().collect { albums ->
                 val sortedAlbums = withContext(Dispatchers.Default) {
                     sortAlbumsList(albums, _currentAlbumSortOption.value).toImmutableList()
                 }
                 _albums.value = sortedAlbums
                 _isLoadingCategories.value = false
+            }
+        }
+
+        singlesJob = scope?.launch {
+            @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+            kotlinx.coroutines.flow.combine(
+                effectiveStorageFilter,
+                singlesCriteriaFlow
+            ) { filter, criteria ->
+                filter to criteria
+            }.flatMapLatest { (filter, criteria) ->
+                musicRepository.getSingles(
+                    storageFilter = filter,
+                    maxTracks = criteria.maxTracks,
+                    maxDurationMs = criteria.maxDurationMs
+                )
+            }.conflate().collect { singles ->
+                val sortedSingles = withContext(Dispatchers.Default) {
+                    sortAlbumsList(singles, _currentSingleSortOption.value).toImmutableList()
+                }
+                _singles.value = sortedSingles
             }
         }
 
@@ -327,6 +428,10 @@ class LibraryStateHolder @Inject constructor(
         startObservingLibraryData()
     }
 
+    fun loadSinglesFromRepository() {
+        startObservingLibraryData()
+    }
+
     fun loadArtistsFromRepository() {
         startObservingLibraryData()
     }
@@ -337,16 +442,15 @@ class LibraryStateHolder @Inject constructor(
 
     // --- Lazy Loading Checks ---
 
-    // --- Lazy Loading Checks ---
-    // We replace conditional "check if empty" with "ensure observing".
-    // If we are already observing, startObservingLibraryData returns early.
-    // If we are not (e.g. process death recovery?), it restarts.
-
     fun loadSongsIfNeeded() {
         startObservingLibraryData()
     }
 
     fun loadAlbumsIfNeeded() {
+        startObservingLibraryData()
+    }
+
+    fun loadSinglesIfNeeded() {
         startObservingLibraryData()
     }
 
@@ -383,6 +487,23 @@ class LibraryStateHolder @Inject constructor(
                 sortAlbumsList(_albums.value, sortOption).toImmutableList()
             }
             _albums.value = sorted
+        }
+    }
+
+    fun sortSingles(sortOption: SortOption, persist: Boolean = true) {
+        scope?.launch {
+            if (persist && _currentSingleSortOption.value.storageKey == sortOption.storageKey) {
+                return@launch
+            }
+            if (persist) {
+                userPreferencesRepository.setSinglesSortOption(sortOption.storageKey)
+            }
+            _currentSingleSortOption.value = sortOption
+
+            val sorted = withContext(Dispatchers.Default) {
+                sortAlbumsList(_singles.value, sortOption).toImmutableList()
+            }
+            _singles.value = sorted
         }
     }
 
@@ -575,27 +696,32 @@ class LibraryStateHolder @Inject constructor(
         val hasLoadedData =
             _allSongs.value.isNotEmpty() ||
                 _albums.value.isNotEmpty() ||
+                _singles.value.isNotEmpty() ||
                 _artists.value.isNotEmpty() ||
                 _musicFolders.value.isNotEmpty()
         val hasActiveCollectors =
             songsJob?.isActive == true ||
                 albumsJob?.isActive == true ||
+                singlesJob?.isActive == true ||
                 artistsJob?.isActive == true ||
                 foldersJob?.isActive == true
         if (!hasLoadedData && !hasActiveCollectors) return
 
         songsJob?.cancel()
         albumsJob?.cancel()
+        singlesJob?.cancel()
         artistsJob?.cancel()
         foldersJob?.cancel()
         songsJob = null
         albumsJob = null
+        singlesJob = null
         artistsJob = null
         foldersJob = null
 
         _allSongs.value = persistentListOf()
         _allSongsById.value = emptyMap()
         _albums.value = persistentListOf()
+        _singles.value = persistentListOf()
         _artists.value = persistentListOf()
         _musicFolders.value = persistentListOf()
         _isLoadingLibrary.value = false

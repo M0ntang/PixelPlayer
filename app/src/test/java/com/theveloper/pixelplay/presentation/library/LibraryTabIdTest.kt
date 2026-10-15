@@ -51,4 +51,37 @@ class LibraryTabIdTest {
             assertEquals(persistedSorts[tab], persistedSorts.getValue(tab))
         }
     }
+
+    @Test
+    fun `decodeActiveLibraryTabs filters out disabled tabs`() {
+        val activeTabs = decodeActiveLibraryTabs(
+            orderJson = null,
+            disabledTabs = setOf(LibraryTabId.Folders.stableKey, LibraryTabId.Artists.stableKey)
+        )
+        assertTrue(activeTabs.none { it == LibraryTabId.Folders || it == LibraryTabId.Artists })
+        assertEquals(LibraryTabId.defaultOrder.size - 2, activeTabs.size)
+    }
+
+    @Test
+    fun `decodeActiveLibraryTabs falls back to at least one tab when all tabs disabled`() {
+        val allKeys = LibraryTabId.defaultOrder.map { it.stableKey }.toSet()
+        val activeTabs = decodeActiveLibraryTabs(orderJson = null, disabledTabs = allKeys)
+        assertEquals(1, activeTabs.size)
+        assertEquals(LibraryTabId.defaultOrder.first(), activeTabs.first())
+    }
+
+    @Test
+    fun `decodeActiveLibraryTabs preserves custom order while filtering disabled tabs`() {
+        val customOrder = listOf(
+            LibraryTabId.Liked.stableKey,
+            LibraryTabId.Songs.stableKey,
+            LibraryTabId.Albums.stableKey
+        )
+        val activeTabs = decodeActiveLibraryTabs(
+            orderJson = Json.encodeToString(customOrder),
+            disabledTabs = setOf(LibraryTabId.Songs.stableKey)
+        )
+        assertEquals(LibraryTabId.Liked, activeTabs.first())
+        assertTrue(activeTabs.none { it == LibraryTabId.Songs })
+    }
 }

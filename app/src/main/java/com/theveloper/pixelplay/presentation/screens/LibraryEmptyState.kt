@@ -75,6 +75,24 @@ private fun libraryEmptySpec(
             )
         }
 
+        LibraryTabId.SINGLES -> when (storageFilter) {
+            StorageFilter.ALL -> LibraryEmptySpec(
+                iconRes = R.drawable.rounded_single_24,
+                titleRes = R.string.library_empty_singles_all_title,
+                subtitleRes = R.string.library_empty_singles_all_subtitle
+            )
+            StorageFilter.OFFLINE -> LibraryEmptySpec(
+                iconRes = R.drawable.rounded_single_24,
+                titleRes = R.string.library_empty_singles_offline_title,
+                subtitleRes = R.string.library_empty_singles_offline_subtitle
+            )
+            StorageFilter.ONLINE -> LibraryEmptySpec(
+                iconRes = R.drawable.rounded_single_24,
+                titleRes = R.string.library_empty_singles_online_title,
+                subtitleRes = R.string.library_empty_singles_online_subtitle
+            )
+        }
+
         LibraryTabId.ARTISTS -> when (storageFilter) {
             StorageFilter.ALL -> LibraryEmptySpec(
                 iconRes = R.drawable.rounded_artist_24,

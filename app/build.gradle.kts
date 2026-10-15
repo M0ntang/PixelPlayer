@@ -218,6 +218,10 @@ ksp {
     arg("room.generateKotlin", "true")
 }
 
+aboutLibraries {
+    offlineMode = true
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)

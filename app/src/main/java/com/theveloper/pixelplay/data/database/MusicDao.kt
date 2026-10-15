@@ -1113,13 +1113,23 @@ interface MusicDao {
             albums.date_added,
             albums.year
         HAVING COUNT(songs.id) >= :minTracks
+        AND (
+            :excludeSingles = 0
+            OR NOT (
+                COUNT(songs.id) <= :singlesMaxTracks
+                AND COALESCE(SUM(songs.duration), 0) <= :singlesMaxDurationMs
+            )
+        )
         ORDER BY albums.title ASC
     """)
     fun getAlbums(
         allowedParentDirs: List<String>,
         applyDirectoryFilter: Boolean,
         filterMode: Int,
-        minTracks: Int
+        minTracks: Int,
+        excludeSingles: Boolean = true,
+        singlesMaxTracks: Int = 3,
+        singlesMaxDurationMs: Long = 600000L
     ): Flow<List<AlbumEntity>>
 
     @Query("""
@@ -1157,6 +1167,13 @@ interface MusicDao {
             albums.date_added,
             albums.year
         HAVING COUNT(songs.id) >= :minTracks
+        AND (
+            :excludeSingles = 0
+            OR NOT (
+                COUNT(songs.id) <= :singlesMaxTracks
+                AND COALESCE(SUM(songs.duration), 0) <= :singlesMaxDurationMs
+            )
+        )
         ORDER BY
             CASE WHEN :sortOrder = 'album_title_az' THEN albums.title END COLLATE NOCASE ASC,
             CASE WHEN :sortOrder = 'album_title_za' THEN albums.title END COLLATE NOCASE DESC,
@@ -1176,7 +1193,10 @@ interface MusicDao {
         applyDirectoryFilter: Boolean,
         filterMode: Int,
         sortOrder: String,
-        minTracks: Int
+        minTracks: Int,
+        excludeSingles: Boolean = true,
+        singlesMaxTracks: Int = 3,
+        singlesMaxDurationMs: Long = 600000L
     ): PagingSource<Int, AlbumEntity>
 
     @Query("""
@@ -1214,6 +1234,13 @@ interface MusicDao {
             albums.date_added,
             albums.year
         HAVING COUNT(songs.id) >= :minTracks
+        AND (
+            :excludeSingles = 0
+            OR NOT (
+                COUNT(songs.id) <= :singlesMaxTracks
+                AND COALESCE(SUM(songs.duration), 0) <= :singlesMaxDurationMs
+            )
+        )
         ORDER BY
             CASE WHEN :sortOrder = 'album_title_az' THEN albums.title END COLLATE NOCASE ASC,
             CASE WHEN :sortOrder = 'album_title_za' THEN albums.title END COLLATE NOCASE DESC,
@@ -1236,8 +1263,118 @@ interface MusicDao {
         sortOrder: String,
         minTracks: Int,
         limit: Int,
-        offset: Int
+        offset: Int,
+        excludeSingles: Boolean = true,
+        singlesMaxTracks: Int = 3,
+        singlesMaxDurationMs: Long = 600000L
     ): List<AlbumEntity>
+
+    @Query("""
+        SELECT
+            albums.id AS id,
+            albums.title AS title,
+            albums.artist_name AS artist_name,
+            albums.artist_id AS artist_id,
+            albums.album_artist AS album_artist,
+            albums.album_art_uri_string AS album_art_uri_string,
+            COUNT(songs.id) AS song_count,
+            albums.date_added AS date_added,
+            albums.year AS year
+        FROM songs
+        INNER JOIN albums ON albums.id = songs.album_id
+        WHERE (:applyDirectoryFilter = 0 OR songs.id < 0 OR songs.parent_directory_path IN (:allowedParentDirs))
+        AND (
+            :filterMode = 0
+            OR (
+                :filterMode = 1
+                AND songs.source_type = 0
+            )
+            OR (
+                :filterMode = 2
+                AND songs.source_type != 0
+            )
+        )
+        GROUP BY
+            albums.id,
+            albums.title,
+            albums.artist_name,
+            albums.artist_id,
+            albums.album_artist,
+            albums.album_art_uri_string,
+            albums.date_added,
+            albums.year
+        HAVING COUNT(songs.id) >= 1
+           AND COUNT(songs.id) <= :maxTracks
+           AND COALESCE(SUM(songs.duration), 0) <= :maxDurationMs
+        ORDER BY albums.title ASC
+    """)
+    fun getSingles(
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean,
+        filterMode: Int,
+        maxTracks: Int,
+        maxDurationMs: Long
+    ): Flow<List<AlbumEntity>>
+
+    @Query("""
+        SELECT
+            albums.id AS id,
+            albums.title AS title,
+            albums.artist_name AS artist_name,
+            albums.artist_id AS artist_id,
+            albums.album_artist AS album_artist,
+            albums.album_art_uri_string AS album_art_uri_string,
+            COUNT(songs.id) AS song_count,
+            albums.date_added AS date_added,
+            albums.year AS year
+        FROM songs
+        INNER JOIN albums ON albums.id = songs.album_id
+        WHERE (:applyDirectoryFilter = 0 OR songs.id < 0 OR songs.parent_directory_path IN (:allowedParentDirs))
+        AND (
+            :filterMode = 0
+            OR (
+                :filterMode = 1
+                AND songs.source_type = 0
+            )
+            OR (
+                :filterMode = 2
+                AND songs.source_type != 0
+            )
+        )
+        GROUP BY
+            albums.id,
+            albums.title,
+            albums.artist_name,
+            albums.artist_id,
+            albums.album_artist,
+            albums.album_art_uri_string,
+            albums.date_added,
+            albums.year
+        HAVING COUNT(songs.id) >= 1
+           AND COUNT(songs.id) <= :maxTracks
+           AND COALESCE(SUM(songs.duration), 0) <= :maxDurationMs
+        ORDER BY
+            CASE WHEN :sortOrder = 'album_title_az' THEN albums.title END COLLATE NOCASE ASC,
+            CASE WHEN :sortOrder = 'album_title_za' THEN albums.title END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'album_artist' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE NOCASE ASC,
+            CASE WHEN :sortOrder = 'album_artist_desc' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'album_release_year' THEN albums.year END DESC,
+            CASE WHEN :sortOrder = 'album_release_year_asc' THEN albums.year END ASC,
+            CASE WHEN :sortOrder = 'album_date_added' THEN albums.date_added END DESC,
+            CASE WHEN :sortOrder = 'album_size_asc' THEN song_count END ASC,
+            CASE WHEN :sortOrder = 'album_size_desc' THEN song_count END DESC,
+            albums.title COLLATE NOCASE ASC,
+            albums.artist_name COLLATE NOCASE ASC,
+            albums.id ASC
+    """)
+    fun getSinglesPaginated(
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean,
+        filterMode: Int,
+        sortOrder: String,
+        maxTracks: Int,
+        maxDurationMs: Long
+    ): PagingSource<Int, AlbumEntity>
 
     @Query("""
         SELECT

@@ -396,6 +396,7 @@ private data class LibraryScreenPlayerProjection(
     val currentStorageFilter: StorageFilter = StorageFilter.ALL,
     val currentSongSortOption: SortOption = SortOption.SongTitleAZ,
     val currentAlbumSortOption: SortOption = SortOption.AlbumTitleAZ,
+    val currentSingleSortOption: SortOption = SortOption.AlbumTitleAZ,
     val currentArtistSortOption: SortOption = SortOption.ArtistNameAZ,
     val currentFavoriteSortOption: SortOption = SortOption.LikedSongDateLiked,
     val currentFolderSortOption: SortOption = SortOption.FolderNameAZ,
@@ -417,6 +418,7 @@ private fun PlayerUiState.toLibraryScreenProjection(): LibraryScreenPlayerProjec
         currentStorageFilter = currentStorageFilter,
         currentSongSortOption = currentSongSortOption,
         currentAlbumSortOption = currentAlbumSortOption,
+        currentSingleSortOption = currentSingleSortOption,
         currentArtistSortOption = currentArtistSortOption,
         currentFavoriteSortOption = currentFavoriteSortOption,
         currentFolderSortOption = currentFolderSortOption,
@@ -463,6 +465,8 @@ fun LibraryScreen(
     var playlistSheetSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val tabTitles by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
+    val allLibraryTabs by playerViewModel.allLibraryTabsFlow.collectAsStateWithLifecycle()
+    val disabledLibraryTabs by playerViewModel.disabledLibraryTabsFlow.collectAsStateWithLifecycle()
     val currentTabId by playerViewModel.currentLibraryTabId.collectAsStateWithLifecycle()
     val libraryNavigationMode by playerViewModel.libraryNavigationMode.collectAsStateWithLifecycle()
     val isCompactNavigation = libraryNavigationMode == LibraryNavigationMode.COMPACT_PILL
@@ -475,6 +479,12 @@ fun LibraryScreen(
         rememberPagerState(initialPage = compactInitialPage) { Int.MAX_VALUE }
     } else {
         rememberPagerState(initialPage = normalizedLastTabIndex) { tabCount }
+    }
+
+    LaunchedEffect(tabTitles.size) {
+        if (!isCompactNavigation && pagerState.currentPage >= tabTitles.size && tabTitles.isNotEmpty()) {
+            pagerState.scrollToPage(tabTitles.size - 1)
+        }
     }
     val currentTabIndex by remember(pagerState, tabTitles, isCompactNavigation) {
         derivedStateOf {
@@ -691,7 +701,8 @@ fun LibraryScreen(
         derivedStateOf {
             when (currentTabId) {
                 LibraryTabId.PLAYLISTS -> isPlaylistSelectionMode
-                LibraryTabId.ALBUMS -> isAlbumSelectionMode
+                LibraryTabId.ALBUMS,
+                LibraryTabId.SINGLES -> isAlbumSelectionMode
                 LibraryTabId.SONGS,
                 LibraryTabId.LIKED,
                 LibraryTabId.FOLDERS -> isSelectionMode
@@ -718,7 +729,8 @@ fun LibraryScreen(
                         pendingMergePlaylistIds = emptyList()
                     }
 
-                    LibraryTabId.ALBUMS -> {
+                    LibraryTabId.ALBUMS,
+                    LibraryTabId.SINGLES -> {
                         selectedAlbums = emptyList()
                         showAlbumMultiSelectionSheet = false
                     }
@@ -1137,6 +1149,7 @@ fun LibraryScreen(
                         val currentSelectedSortOption: SortOption? = when (currentTabId) {
                             LibraryTabId.SONGS -> playerUiState.currentSongSortOption
                             LibraryTabId.ALBUMS -> playerUiState.currentAlbumSortOption
+                            LibraryTabId.SINGLES -> playerUiState.currentSingleSortOption
                             LibraryTabId.ARTISTS -> playerUiState.currentArtistSortOption
                             LibraryTabId.PLAYLISTS -> playlistUiState.currentPlaylistSortOption
                             LibraryTabId.LIKED -> playerUiState.currentFavoriteSortOption
@@ -1161,6 +1174,7 @@ fun LibraryScreen(
                                 when (currentTabId) {
                                     LibraryTabId.SONGS -> playerViewModel.sortSongs(option)
                                     LibraryTabId.ALBUMS -> playerViewModel.sortAlbums(option)
+                                    LibraryTabId.SINGLES -> playerViewModel.sortSingles(option)
                                     LibraryTabId.ARTISTS -> playerViewModel.sortArtists(option)
                                     LibraryTabId.PLAYLISTS -> playlistViewModel.sortPlaylists(option)
                                     LibraryTabId.LIKED -> playerViewModel.sortFavoriteSongs(option)
@@ -1196,7 +1210,7 @@ fun LibraryScreen(
                                         onDeselect = { playerViewModel.playlistSelectionStateHolder.clearSelection() },
                                         onOptionsClick = { showPlaylistMultiSelectionSheet = true }
                                     )
-                                } else if (currentTabId == LibraryTabId.ALBUMS && isAlbumSelectionMode) {
+                                } else if ((currentTabId == LibraryTabId.ALBUMS || currentTabId == LibraryTabId.SINGLES) && isAlbumSelectionMode) {
                                     SelectionActionRow(
                                         selectedCount = selectedAlbums.size,
                                         onSelectAll = {
@@ -1209,7 +1223,12 @@ fun LibraryScreen(
                                                     )
                                                 )
                                             } else {
-                                                val albumsToAppend = playerViewModel.albumsFlow.value
+                                                val sourceList = if (currentTabId == LibraryTabId.SINGLES) {
+                                                    playerViewModel.singlesFlow.value
+                                                } else {
+                                                    playerViewModel.albumsFlow.value
+                                                }
+                                                val albumsToAppend = sourceList
                                                     .filterNot { selectedAlbumIds.contains(it.id) }
                                                     .take(remaining)
                                                 if (albumsToAppend.isNotEmpty()) {
@@ -1262,6 +1281,7 @@ fun LibraryScreen(
                                             LibraryTabId.PLAYLISTS -> showPlaylistCreationTypeDialog = true
                                             LibraryTabId.LIKED -> playerViewModel.shuffleFavoriteSongs()
                                             LibraryTabId.ALBUMS -> playerViewModel.shuffleRandomAlbum()
+                                            LibraryTabId.SINGLES -> playerViewModel.shuffleRandomSingle()
                                             LibraryTabId.ARTISTS -> playerViewModel.shuffleRandomArtist()
                                             else -> playerViewModel.shuffleAllSongs()
                                         }
@@ -1284,6 +1304,7 @@ fun LibraryScreen(
                                     isShuffleEnabled = isShuffleEnabled,
                                     showStorageFilterButton = currentTabId == LibraryTabId.SONGS ||
                                             currentTabId == LibraryTabId.ALBUMS ||
+                                            currentTabId == LibraryTabId.SINGLES ||
                                             currentTabId == LibraryTabId.ARTISTS ||
                                             currentTabId == LibraryTabId.LIKED ||
                                             (ENABLE_FOLDERS_STORAGE_FILTER && currentTabId == LibraryTabId.FOLDERS),
@@ -1312,7 +1333,7 @@ fun LibraryScreen(
                                 ?: sanitizedSortOptions.first()
 
 
-                            val isAlbumTab = currentTabId == LibraryTabId.ALBUMS
+                            val isAlbumTab = currentTabId == LibraryTabId.ALBUMS || currentTabId == LibraryTabId.SINGLES
                             val isFoldersTab = currentTabId == LibraryTabId.FOLDERS
                             val isPlaylistsTab = currentTabId == LibraryTabId.PLAYLISTS
 
@@ -1566,7 +1587,8 @@ fun LibraryScreen(
                                             onAlbumLongPress = onAlbumLongPress,
                                             onAlbumSelectionToggle = onAlbumSelectionToggle,
                                             getSelectionIndex = getAlbumSelectionIndex,
-                                            storageFilter = playerUiState.currentStorageFilter
+                                            storageFilter = playerUiState.currentStorageFilter,
+                                            tabId = LibraryTabId.ALBUMS
                                         )
                                     }
 
@@ -1686,6 +1708,40 @@ fun LibraryScreen(
                                         )
                                     }
 
+                                    LibraryTabId.SINGLES -> {
+                                        val singlesLazyPagingItems = libraryViewModel.singlesPagingFlow.collectAsLazyPagingItems()
+                                        val isLoading = playerUiState.isLoadingLibraryCategories
+
+                                        val stableOnSingleClick: (Long) -> Unit = remember(navController) {
+                                            { albumId: Long ->
+                                                navController.navigateSafelyReplacing(
+                                                    route = Screen.AlbumDetail.createRoute(albumId),
+                                                    patternToPop = Screen.AlbumDetail.route
+                                                )
+                                            }
+                                        }
+                                        LibraryAlbumsTab(
+                                            albums = singlesLazyPagingItems,
+                                            isLoading = isLoading,
+                                            playerViewModel = playerViewModel,
+                                            bottomBarHeight = bottomBarHeightDp,
+                                            isListView = playerUiState.isAlbumsListView,
+                                            currentAlbumSortOption = playerUiState.currentSingleSortOption,
+                                            onAlbumClick = stableOnSingleClick,
+                                            isRefreshing = isRefreshing,
+                                            onRefresh = {
+                                                onRefresh()
+                                                singlesLazyPagingItems.refresh()
+                                            },
+                                            isSelectionMode = isAlbumSelectionMode,
+                                            selectedAlbumIds = selectedAlbumIds,
+                                            onAlbumLongPress = onAlbumLongPress,
+                                            onAlbumSelectionToggle = onAlbumSelectionToggle,
+                                            getSelectionIndex = getAlbumSelectionIndex,
+                                            storageFilter = playerUiState.currentStorageFilter,
+                                            tabId = LibraryTabId.SINGLES
+                                        )
+                                    }
                                     null -> Unit
                                 }
                             }
@@ -1693,7 +1749,7 @@ fun LibraryScreen(
                             // Floating selection count pill overlay
                             val selectionCount = when {
                                 currentTabId == LibraryTabId.PLAYLISTS && isPlaylistSelectionMode -> selectedPlaylists.size
-                                currentTabId == LibraryTabId.ALBUMS && isAlbumSelectionMode -> selectedAlbums.size
+                                (currentTabId == LibraryTabId.ALBUMS || currentTabId == LibraryTabId.SINGLES) && isAlbumSelectionMode -> selectedAlbums.size
                                 else -> selectedSongs.size
                             }
                             SelectionCountPill(
@@ -2012,6 +2068,11 @@ fun LibraryScreen(
                     selectedAlbums = emptyList()
                     showAlbumMultiSelectionSheet = false
                 }
+            },
+            onHideFromAlbums = {
+                playerViewModel.hideSelectedAlbums(selectedAlbums)
+                selectedAlbums = emptyList()
+                showAlbumMultiSelectionSheet = false
             }
         )
     }
@@ -2077,9 +2138,10 @@ fun LibraryScreen(
 
     if (showReorderTabsSheet) {
         ReorderTabsSheet(
-            tabs = tabTitles,
-            onReorder = { newOrder ->
-                playerViewModel.saveLibraryTabsOrder(newOrder)
+            tabs = allLibraryTabs,
+            disabledTabs = disabledLibraryTabs,
+            onSave = { newOrder, newDisabledTabs ->
+                playerViewModel.saveLibraryTabs(newOrder, newDisabledTabs)
             },
             onReset = {
                 playerViewModel.resetLibraryTabsOrder()
@@ -2804,6 +2866,7 @@ private fun targetPageForTabIndex(
 private fun LibraryTabId.iconRes(): Int = when (this) {
     LibraryTabId.SONGS -> R.drawable.rounded_music_note_24
     LibraryTabId.ALBUMS -> R.drawable.rounded_album_24
+    LibraryTabId.SINGLES -> R.drawable.rounded_single_24
     LibraryTabId.ARTISTS -> R.drawable.rounded_artist_24
     LibraryTabId.PLAYLISTS -> R.drawable.rounded_playlist_play_24
     LibraryTabId.FOLDERS -> R.drawable.rounded_folder_24

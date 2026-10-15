@@ -50,6 +50,7 @@ data class PlayerUiState(
     val isAlbumsListView: Boolean = false,
     val currentFavoriteSortOption: SortOption = SortOption.LikedSongDateLiked,
     val currentAlbumSortOption: SortOption = SortOption.AlbumTitleAZ,
+    val currentSingleSortOption: SortOption = SortOption.AlbumTitleAZ,
     val currentArtistSortOption: SortOption = SortOption.ArtistNameAZ,
     val currentFolderSortOption: SortOption = SortOption.FolderNameAZ,
     val folderBackGestureNavigationEnabled: Boolean = true,

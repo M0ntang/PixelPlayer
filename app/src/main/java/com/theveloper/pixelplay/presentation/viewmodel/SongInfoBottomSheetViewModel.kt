@@ -23,6 +23,7 @@ import com.theveloper.pixelplay.data.service.wear.WearPhoneTransferSender
 import com.theveloper.pixelplay.shared.WearTransferProgress
 import com.theveloper.pixelplay.utils.AudioMeta
 import com.theveloper.pixelplay.utils.AudioMetaUtils
+import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
@@ -47,8 +48,16 @@ class SongInfoBottomSheetViewModel @Inject constructor(
     private val wearPhoneTransferSender: WearPhoneTransferSender,
     private val transferStateStore: PhoneWatchTransferStateStore,
     private val musicDao: MusicDao,
+    private val userPreferencesRepository: UserPreferencesRepository,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
+
+    val songMenuIconsOnly: StateFlow<Boolean> = userPreferencesRepository.songMenuIconsOnlyFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false
+        )
 
     data class SongLocationInfo(
         val label: String,

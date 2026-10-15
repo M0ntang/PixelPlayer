@@ -48,6 +48,7 @@ import com.theveloper.pixelplay.data.model.SearchFilterType
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.model.SortOption
 import com.theveloper.pixelplay.data.model.toLibraryTabIdOrNull
+import com.theveloper.pixelplay.presentation.library.decodeLibraryTabOrder
 import com.theveloper.pixelplay.data.provider.SharedArtworkContentProvider
 import com.theveloper.pixelplay.data.preferences.CarouselStyle
 import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
@@ -174,10 +175,13 @@ private data class AiUiSnapshot(
 private data class SortOptionsSnapshot(
     val songSort: SortOption,
     val albumSort: SortOption,
+    val singleSort: SortOption,
     val artistSort: SortOption,
     val folderSort: SortOption,
     val favoriteSort: SortOption,
 )
+
+private val DEFAULT_LIBRARY_TABS = listOf("SONGS", "ALBUMS", "SINGLES", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
 
 @UnstableApi
 @SuppressLint("LogNotTimber")
@@ -986,6 +990,7 @@ class PlayerViewModel @Inject constructor(
         scope = viewModelScope,
         currentStorageFilter = { playerUiState.value.currentStorageFilter },
         albums = { libraryStateHolder.albums.value },
+        singles = { libraryStateHolder.singles.value },
         artists = { libraryStateHolder.artists.value },
         playShuffled = { songs, queueName -> playSongsShuffled(songs, queueName, startAtZero = true) },
     )
@@ -1075,19 +1080,34 @@ class PlayerViewModel @Inject constructor(
             initialValue = 0 // Default to Songs tab
         )
 
-    val libraryTabsFlow: StateFlow<List<String>> = userPreferencesRepository.libraryTabsOrderFlow
+    val allLibraryTabsFlow: StateFlow<List<String>> = userPreferencesRepository.libraryTabsOrderFlow
         .map { orderJson ->
-            if (orderJson != null) {
-                try {
-                    Json.decodeFromString<List<String>>(orderJson)
-                } catch (e: Exception) {
-                    listOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
-                }
-            } else {
-                listOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
-            }
+            decodeLibraryTabOrder(orderJson).map { it.stableKey }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED"))
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            DEFAULT_LIBRARY_TABS
+        )
+
+    val disabledLibraryTabsFlow: StateFlow<Set<String>> = userPreferencesRepository.disabledLibraryTabsFlow
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptySet()
+        )
+
+    val libraryTabsFlow: StateFlow<List<String>> = combine(
+        allLibraryTabsFlow,
+        disabledLibraryTabsFlow
+    ) { allTabs, disabledTabs ->
+        val active = allTabs.filter { it !in disabledTabs }
+        active.ifEmpty { listOf(allTabs.firstOrNull() ?: "SONGS") }
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        DEFAULT_LIBRARY_TABS
+    )
 
     private val _loadedTabs = MutableStateFlow(emptySet<String>())
     private var lastBlockedDirectories: Set<String>? = null
@@ -1105,6 +1125,7 @@ class PlayerViewModel @Inject constructor(
                 when (tabId) {
                     LibraryTabId.SONGS -> SortOption.SONGS
                     LibraryTabId.ALBUMS -> SortOption.ALBUMS
+                    LibraryTabId.SINGLES -> SortOption.ALBUMS
                     LibraryTabId.ARTISTS -> SortOption.ARTISTS
                     LibraryTabId.PLAYLISTS -> SortOption.PLAYLISTS
                     LibraryTabId.FOLDERS -> SortOption.FOLDERS
@@ -1173,6 +1194,7 @@ class PlayerViewModel @Inject constructor(
         )
 
     val albumsFlow: StateFlow<ImmutableList<Album>> = libraryStateHolder.albums
+    val singlesFlow: StateFlow<ImmutableList<Album>> = libraryStateHolder.singles
     val artistsFlow: StateFlow<ImmutableList<Artist>> = libraryStateHolder.artists
 
     var searchQuery by mutableStateOf("")
@@ -1436,6 +1458,9 @@ class PlayerViewModel @Inject constructor(
     fun shuffleRandomAlbum() =
         queueStateHolder.shuffleRandomAlbum(shufflePlaybackCallbacks())
 
+    fun shuffleRandomSingle() =
+        queueStateHolder.shuffleRandomSingle(shufflePlaybackCallbacks())
+
     fun shuffleRandomArtist() =
         queueStateHolder.shuffleRandomArtist(shufflePlaybackCallbacks())
 
@@ -1646,6 +1671,11 @@ class PlayerViewModel @Inject constructor(
                 SortOption.ALBUMS,
                 SortOption.AlbumTitleAZ
             )
+            val initialSingleSort = resolveSortOption(
+                userPreferencesRepository.singlesSortOptionFlow.first(),
+                SortOption.ALBUMS,
+                SortOption.AlbumTitleAZ
+            )
             val initialArtistSort = resolveSortOption(
                 userPreferencesRepository.artistsSortOptionFlow.first(),
                 SortOption.ARTISTS,
@@ -1666,6 +1696,7 @@ class PlayerViewModel @Inject constructor(
                 it.copy(
                     currentSongSortOption = initialSongSort,
                     currentAlbumSortOption = initialAlbumSort,
+                    currentSingleSortOption = initialSingleSort,
                     currentArtistSortOption = initialArtistSort,
                     currentFolderSortOption = initialFolderSort,
                     currentFavoriteSortOption = initialLikedSort
@@ -1676,6 +1707,7 @@ class PlayerViewModel @Inject constructor(
 
             sortSongs(initialSongSort, persist = false)
             sortAlbums(initialAlbumSort, persist = false)
+            sortSingles(initialSingleSort, persist = false)
             sortArtists(initialArtistSort, persist = false)
             sortFolders(initialFolderSort, persist = false)
             sortFavoriteSongs(initialLikedSort, persist = false)
@@ -1850,18 +1882,29 @@ class PlayerViewModel @Inject constructor(
         // Sync sort options and storage filter
         viewModelScope.launch {
             combine(
-                libraryStateHolder.currentSongSortOption,
-                libraryStateHolder.currentAlbumSortOption,
-                libraryStateHolder.currentArtistSortOption,
-                libraryStateHolder.currentFolderSortOption,
-                libraryStateHolder.currentFavoriteSortOption,
-            ) { songSort, albumSort, artistSort, folderSort, favoriteSort ->
-                SortOptionsSnapshot(songSort, albumSort, artistSort, folderSort, favoriteSort)
+                listOf(
+                    libraryStateHolder.currentSongSortOption,
+                    libraryStateHolder.currentAlbumSortOption,
+                    libraryStateHolder.currentSingleSortOption,
+                    libraryStateHolder.currentArtistSortOption,
+                    libraryStateHolder.currentFolderSortOption,
+                    libraryStateHolder.currentFavoriteSortOption,
+                )
+            ) { array ->
+                SortOptionsSnapshot(
+                    songSort = array[0],
+                    albumSort = array[1],
+                    singleSort = array[2],
+                    artistSort = array[3],
+                    folderSort = array[4],
+                    favoriteSort = array[5],
+                )
             }.collect { snapshot ->
                 _playerUiState.update {
                     it.copy(
                         currentSongSortOption = snapshot.songSort,
                         currentAlbumSortOption = snapshot.albumSort,
+                        currentSingleSortOption = snapshot.singleSort,
                         currentArtistSortOption = snapshot.artistSort,
                         currentFolderSortOption = snapshot.folderSort,
                         currentFavoriteSortOption = snapshot.favoriteSort,
@@ -1984,6 +2027,7 @@ class PlayerViewModel @Inject constructor(
     private fun loadInitialLibraryDataParallel() {
         libraryStateHolder.loadSongsFromRepository()
         libraryStateHolder.loadAlbumsFromRepository()
+        libraryStateHolder.loadSinglesFromRepository()
         libraryStateHolder.loadArtistsFromRepository()
         libraryStateHolder.loadFoldersFromRepository()
     }
@@ -2001,6 +2045,7 @@ class PlayerViewModel @Inject constructor(
 
     fun loadSongsIfNeeded() = libraryStateHolder.loadSongsIfNeeded()
     fun loadAlbumsIfNeeded() = libraryStateHolder.loadAlbumsIfNeeded()
+    fun loadSinglesIfNeeded() = libraryStateHolder.loadSinglesIfNeeded()
     fun loadArtistsIfNeeded() = libraryStateHolder.loadArtistsIfNeeded()
     fun loadFoldersFromRepository() = libraryStateHolder.loadFoldersFromRepository()
 
@@ -2372,6 +2417,20 @@ class PlayerViewModel @Inject constructor(
     fun addSelectedAlbumsToQueue(albums: List<Album>) =
         multiSelectionStateHolder.addSelectedAlbumsToQueue(albums, selectionActionCallbacks())
 
+    fun hideSelectedAlbums(albums: List<Album>) {
+        if (albums.isEmpty()) return
+        viewModelScope.launch {
+            userPreferencesRepository.hideAlbums(albums.map { it.id })
+            val count = albums.size
+            val msg = if (count == 1) {
+                context.getString(R.string.album_toast_hidden_from_albums_singular)
+            } else {
+                context.getString(R.string.album_toast_hidden_from_albums_plural, count)
+            }
+            sendToast(msg)
+        }
+    }
+
     fun likeSelectedSongs(songs: List<Song>) =
         multiSelectionStateHolder.likeSelectedSongs(songs, selectionActionCallbacks())
 
@@ -2498,6 +2557,10 @@ class PlayerViewModel @Inject constructor(
 
     fun sortAlbums(sortOption: SortOption, persist: Boolean = true) {
         libraryStateHolder.sortAlbums(sortOption, persist)
+    }
+
+    fun sortSingles(sortOption: SortOption, persist: Boolean = true) {
+        libraryStateHolder.sortSingles(sortOption, persist)
     }
 
     fun sortArtists(sortOption: SortOption, persist: Boolean = true) {
@@ -2816,9 +2879,34 @@ class PlayerViewModel @Inject constructor(
             scope = viewModelScope,
             loadSongs = { loadSongsIfNeeded() },
             loadAlbums = { loadAlbumsIfNeeded() },
+            loadSingles = { loadSinglesIfNeeded() },
             loadArtists = { loadArtistsIfNeeded() },
             loadFolders = { loadFoldersFromRepository() }
         )
+    }
+
+    fun saveLibraryTabs(order: List<String>, disabledTabs: Set<String>) {
+        viewModelScope.launch {
+            val orderJson = Json.encodeToString(order)
+            userPreferencesRepository.saveLibraryTabsOrderAndDisabled(orderJson, disabledTabs)
+            val activeTabs = order.filter { it !in disabledTabs }
+            val currentIndex = userPreferencesRepository.lastLibraryTabIndexFlow.first()
+            if (activeTabs.isNotEmpty() && currentIndex >= activeTabs.size) {
+                userPreferencesRepository.saveLastLibraryTabIndex(activeTabs.size - 1)
+            }
+        }
+    }
+
+    fun setDisabledLibraryTabs(disabledTabs: Set<String>) {
+        viewModelScope.launch {
+            userPreferencesRepository.setDisabledLibraryTabs(disabledTabs)
+            val allTabs = allLibraryTabsFlow.value
+            val activeTabs = allTabs.filter { it !in disabledTabs }
+            val currentIndex = userPreferencesRepository.lastLibraryTabIndexFlow.first()
+            if (activeTabs.isNotEmpty() && currentIndex >= activeTabs.size) {
+                userPreferencesRepository.saveLastLibraryTabIndex(activeTabs.size - 1)
+            }
+        }
     }
 
     fun saveLibraryTabsOrder(tabs: List<String>) {

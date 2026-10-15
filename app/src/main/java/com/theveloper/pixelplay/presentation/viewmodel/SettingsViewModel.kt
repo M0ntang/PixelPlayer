@@ -65,6 +65,7 @@ data class SettingsUiState(
     val navBarCornerRadius: Int = 32,
     val navBarStyle: String = NavBarStyle.DEFAULT,
     val navBarCompactMode: Boolean = false,
+    val songMenuIconsOnly: Boolean = false,
     val carouselStyle: String = CarouselStyle.NO_PEEK,
     val headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     val headerActionsLayout: String = HeaderActionsLayout.SPLIT,
@@ -112,6 +113,10 @@ data class SettingsUiState(
     val collageAutoRotate: Boolean = false,
     val minSongDuration: Int = 10000,
     val minTracksPerAlbum: Int = 1,
+    val maxTracksPerSingle: Int = 3,
+    val maxSingleDurationMinutes: Int = 10,
+    val excludeSinglesFromAlbums: Boolean = true,
+    val hiddenAlbumCount: Int = 0,
     val replayGainEnabled: Boolean = false,
     val replayGainUseAlbumGain: Boolean = false,
     val isSafeTokenLimitEnabled: Boolean = true,
@@ -155,7 +160,8 @@ private sealed interface SettingsUiUpdate {
         val headerCoverStyle: String,
         val headerActionsLayout: String,
         val launchTab: String,
-        val showPlayerFileInfo: Boolean
+        val showPlayerFileInfo: Boolean,
+        val songMenuIconsOnly: Boolean
     ) : SettingsUiUpdate
     
     data class Group2(
@@ -613,7 +619,8 @@ class SettingsViewModel @Inject constructor(
                 userPreferencesRepository.headerCoverStyleFlow,
                 userPreferencesRepository.headerActionsLayoutFlow,
                 userPreferencesRepository.launchTabFlow,
-                userPreferencesRepository.showPlayerFileInfoFlow
+                userPreferencesRepository.showPlayerFileInfoFlow,
+                userPreferencesRepository.songMenuIconsOnlyFlow
             ) { values ->
                 SettingsUiUpdate.Group1(
                     appRebrandDialogShown = values[0] as Boolean,
@@ -630,7 +637,8 @@ class SettingsViewModel @Inject constructor(
                     headerCoverStyle = values[11] as String,
                     headerActionsLayout = values[12] as String,
                     launchTab = values[13] as String,
-                    showPlayerFileInfo = values[14] as Boolean
+                    showPlayerFileInfo = values[14] as Boolean,
+                    songMenuIconsOnly = values[15] as Boolean
                 )
             }.collect { update ->
                 _uiState.update { state ->
@@ -649,7 +657,8 @@ class SettingsViewModel @Inject constructor(
                         headerCoverStyle = update.headerCoverStyle,
                         headerActionsLayout = update.headerActionsLayout,
                         launchTab = update.launchTab,
-                        showPlayerFileInfo = update.showPlayerFileInfo
+                        showPlayerFileInfo = update.showPlayerFileInfo,
+                        songMenuIconsOnly = update.songMenuIconsOnly
                     )
                 }
             }
@@ -788,6 +797,30 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.minTracksPerAlbumFlow.collect { minTracks ->
                 _uiState.update { it.copy(minTracksPerAlbum = minTracks) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.maxTracksPerSingleFlow.collect { maxTracks ->
+                _uiState.update { it.copy(maxTracksPerSingle = maxTracks) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.maxSingleDurationMinutesFlow.collect { maxMinutes ->
+                _uiState.update { it.copy(maxSingleDurationMinutes = maxMinutes) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.excludeSinglesFromAlbumsFlow.collect { exclude ->
+                _uiState.update { it.copy(excludeSinglesFromAlbums = exclude) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.hiddenAlbumIdsFlow.collect { hiddenIds ->
+                _uiState.update { it.copy(hiddenAlbumCount = hiddenIds.size) }
             }
         }
 
@@ -937,6 +970,12 @@ class SettingsViewModel @Inject constructor(
     fun setNavBarCompactMode(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setNavBarCompactMode(enabled)
+        }
+    }
+
+    fun setSongMenuIconsOnly(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setSongMenuIconsOnly(enabled)
         }
     }
 
@@ -1185,6 +1224,30 @@ class SettingsViewModel @Inject constructor(
     fun setMinTracksPerAlbum(minTracks: Int) {
         viewModelScope.launch {
             userPreferencesRepository.setMinTracksPerAlbum(minTracks)
+        }
+    }
+
+    fun setMaxTracksPerSingle(maxTracks: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setMaxTracksPerSingle(maxTracks)
+        }
+    }
+
+    fun setMaxSingleDurationMinutes(maxMinutes: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setMaxSingleDurationMinutes(maxMinutes)
+        }
+    }
+
+    fun setExcludeSinglesFromAlbums(exclude: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setExcludeSinglesFromAlbums(exclude)
+        }
+    }
+
+    fun clearHiddenAlbums() {
+        viewModelScope.launch {
+            userPreferencesRepository.clearHiddenAlbums()
         }
     }
 

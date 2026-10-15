@@ -839,6 +839,11 @@ fun SearchScreen(
                     selectedAlbums = emptyList()
                     showAlbumMultiSelectionSheet = false
                 }
+            },
+            onHideFromAlbums = {
+                playerViewModel.hideSelectedAlbums(selectedAlbums)
+                selectedAlbums = emptyList()
+                showAlbumMultiSelectionSheet = false
             }
         )
     }

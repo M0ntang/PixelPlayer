@@ -15,6 +15,8 @@ class LibraryViewModel @Inject constructor(
 
     val albumsPagingFlow = libraryStateHolder.albumsPagingFlow.cachedIn(viewModelScope)
 
+    val singlesPagingFlow = libraryStateHolder.singlesPagingFlow.cachedIn(viewModelScope)
+
     val artistsPagingFlow = libraryStateHolder.artistsPagingFlow.cachedIn(viewModelScope)
 
     val favoritesPagingFlow = libraryStateHolder.favoritesPagingFlow.cachedIn(viewModelScope)

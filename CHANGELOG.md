@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.8.4-beta] - 2026-10-15
+## [0.8.5-beta] - 2026-10-15
+
+### Added
+- **Dedicated Singles Library Tab:** Added a new "Singles" tab that isolates short releases (configurable thresholds: default up to 3 tracks and 10 minutes duration).
+- **Smart Singles / Albums Exclusion:** Automatically excludes releases that meet the singles criteria from the "Albums" tab (toggleable in Settings -> Filtering).
+- **Library Tab Visibility Controls:** Added individual toggle switches in the "Reorder tabs" sheet to show or hide any library tab while ensuring at least one active tab remains.
+- **Compact Song Action Menu (Icons-Only):** Added a new toggle in Settings -> Song Menu to hide action labels and render an ultra-compact icon grid.
+- **Hide Albums from Library:** Added "Hide from albums" action to the album multi-selection sheet, with a hidden album restore manager in Settings -> Filtering.
+
+### Changed
+- **Russian & Multi-language Text Wrapping:** Fixed cramped and overflowing Russian strings in bottom sheets by streamlining action labels and preventing ugly line breaks.
+- **Removed Ringtone Button:** Completely removed the obsolete "Set as sound" button from the song info sheet to declutter actions and expand the Pixel Watch transfer button to full width.
+- **Unified Multi-Selection:** Unified back handling, multi-selection, and sort options across Albums and Singles tabs.
 
 ### Added
 - **Dynamic Header Action Buttons Layout:** Added configurable button positioning in Experimental Settings (`SPLIT`, `ALL_LEFT`, `ALL_RIGHT`).

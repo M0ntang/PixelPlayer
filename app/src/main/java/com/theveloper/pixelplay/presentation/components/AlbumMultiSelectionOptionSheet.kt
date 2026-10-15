@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -61,7 +62,8 @@ fun AlbumMultiSelectionOptionSheet(
     onPlay: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
-    onAddToPlaylist: () -> Unit
+    onAddToPlaylist: () -> Unit,
+    onHideFromAlbums: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -223,6 +225,38 @@ fun AlbumMultiSelectionOptionSheet(
                     },
                     text = stringResource(R.string.song_info_action_add_to_queue)
                 )
+            }
+
+            if (onHideFromAlbums != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AlbumSelectionActionButton(
+                        onClick = {
+                            onHideFromAlbums()
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Rounded.VisibilityOff,
+                                contentDescription = stringResource(R.string.album_action_hide_from_albums)
+                            )
+                        },
+                        text = stringResource(R.string.album_action_hide_from_albums)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))

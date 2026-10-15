@@ -107,6 +107,7 @@ class UserPreferencesRepository @Inject constructor(
         val SONGS_SORT_OPTION = stringPreferencesKey("songs_sort_option")
         val SONGS_SORT_OPTION_MIGRATED = booleanPreferencesKey("songs_sort_option_migrated_v2")
         val ALBUMS_SORT_OPTION = stringPreferencesKey("albums_sort_option")
+        val SINGLES_SORT_OPTION = stringPreferencesKey("singles_sort_option")
         val ARTISTS_SORT_OPTION = stringPreferencesKey("artists_sort_option")
         val PLAYLISTS_SORT_OPTION = stringPreferencesKey("playlists_sort_option")
         val FOLDERS_SORT_OPTION = stringPreferencesKey("folders_sort_option")
@@ -122,6 +123,7 @@ class UserPreferencesRepository @Inject constructor(
         val NAV_BAR_CORNER_RADIUS = intPreferencesKey("nav_bar_corner_radius")
         val NAV_BAR_STYLE = stringPreferencesKey("nav_bar_style")
         val NAV_BAR_COMPACT_MODE = booleanPreferencesKey("nav_bar_compact_mode")
+        val SONG_MENU_ICONS_ONLY = booleanPreferencesKey("song_menu_icons_only")
         val CAROUSEL_STYLE = stringPreferencesKey("carousel_style")
         val HEADER_COVER_STYLE = stringPreferencesKey("header_cover_style")
         val HEADER_ACTIONS_LAYOUT = stringPreferencesKey("header_actions_layout")
@@ -131,6 +133,7 @@ class UserPreferencesRepository @Inject constructor(
         // Transition
         val GLOBAL_TRANSITION_SETTINGS = stringPreferencesKey("global_transition_settings_json")
         val LIBRARY_TABS_ORDER = stringPreferencesKey("library_tabs_order")
+        val DISABLED_LIBRARY_TABS = stringSetPreferencesKey("disabled_library_tabs")
         val IS_FOLDER_FILTER_ACTIVE = booleanPreferencesKey("is_folder_filter_active")
         val IS_FOLDERS_PLAYLIST_VIEW = booleanPreferencesKey("is_folders_playlist_view")
         val SHOW_TELEGRAM_CLOUD_PLAYLISTS = booleanPreferencesKey("show_telegram_cloud_playlists")
@@ -242,6 +245,10 @@ class UserPreferencesRepository @Inject constructor(
         // Filtering
         val MIN_SONG_DURATION = intPreferencesKey("min_song_duration_ms")
         val MIN_TRACKS_PER_ALBUM = intPreferencesKey("min_tracks_per_album")
+        val MAX_TRACKS_PER_SINGLE = intPreferencesKey("max_tracks_per_single")
+        val MAX_SINGLE_DURATION_MINUTES = intPreferencesKey("max_single_duration_minutes")
+        val EXCLUDE_SINGLES_FROM_ALBUMS = booleanPreferencesKey("exclude_singles_from_albums")
+        val HIDDEN_ALBUM_IDS = stringSetPreferencesKey("hidden_album_ids")
 
         // ReplayGain
         val REPLAYGAIN_ENABLED = booleanPreferencesKey("replaygain_enabled")
@@ -726,6 +733,66 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
         }
     }
 
+    val maxTracksPerSingleFlow: Flow<Int> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.MAX_TRACKS_PER_SINGLE] ?: 3
+        }
+
+    suspend fun setMaxTracksPerSingle(maxTracks: Int) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MAX_TRACKS_PER_SINGLE] = maxTracks
+        }
+    }
+
+    val maxSingleDurationMinutesFlow: Flow<Int> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.MAX_SINGLE_DURATION_MINUTES] ?: 10
+        }
+
+    suspend fun setMaxSingleDurationMinutes(minutes: Int) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MAX_SINGLE_DURATION_MINUTES] = minutes
+        }
+    }
+
+    val excludeSinglesFromAlbumsFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.EXCLUDE_SINGLES_FROM_ALBUMS] ?: true
+        }
+
+    suspend fun setExcludeSinglesFromAlbums(exclude: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EXCLUDE_SINGLES_FROM_ALBUMS] = exclude
+        }
+    }
+
+    // ─── Hidden albums ─────────────────────────────────────────────────────────
+
+    val hiddenAlbumIdsFlow: Flow<Set<String>> =
+        pref { it[PreferencesKeys.HIDDEN_ALBUM_IDS] ?: emptySet() }.distinctUntilChanged()
+
+    suspend fun hideAlbums(albumIds: List<Long>) {
+        if (albumIds.isEmpty()) return
+        dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.HIDDEN_ALBUM_IDS] ?: emptySet()
+            preferences[PreferencesKeys.HIDDEN_ALBUM_IDS] = current + albumIds.map { it.toString() }
+        }
+    }
+
+    suspend fun unhideAlbums(albumIds: List<Long>) {
+        if (albumIds.isEmpty()) return
+        dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.HIDDEN_ALBUM_IDS] ?: emptySet()
+            preferences[PreferencesKeys.HIDDEN_ALBUM_IDS] = current - albumIds.map { it.toString() }.toSet()
+        }
+    }
+
+    suspend fun clearHiddenAlbums() {
+        dataStore.edit { preferences ->
+            preferences.remove(PreferencesKeys.HIDDEN_ALBUM_IDS)
+        }
+    }
+
     val replayGainEnabledFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.REPLAYGAIN_ENABLED] ?: false
@@ -780,6 +847,9 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
     val albumsSortOptionFlow: Flow<String> =
         pref { SortOption.fromStorageKey(it[PreferencesKeys.ALBUMS_SORT_OPTION], SortOption.ALBUMS, SortOption.AlbumTitleAZ).storageKey }
 
+    val singlesSortOptionFlow: Flow<String> =
+        pref { SortOption.fromStorageKey(it[PreferencesKeys.SINGLES_SORT_OPTION], SortOption.ALBUMS, SortOption.AlbumTitleAZ).storageKey }
+
     val artistsSortOptionFlow: Flow<String> =
         pref { SortOption.fromStorageKey(it[PreferencesKeys.ARTISTS_SORT_OPTION], SortOption.ARTISTS, SortOption.ArtistNameAZ).storageKey }
 
@@ -801,6 +871,10 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
 
     suspend fun setAlbumsSortOption(optionKey: String) {
         dataStore.edit { it[PreferencesKeys.ALBUMS_SORT_OPTION] = optionKey }
+    }
+
+    suspend fun setSinglesSortOption(optionKey: String) {
+        dataStore.edit { it[PreferencesKeys.SINGLES_SORT_OPTION] = optionKey }
     }
 
     suspend fun setArtistsSortOption(optionKey: String) {
@@ -885,12 +959,29 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
     val libraryTabsOrderFlow: Flow<String?> =
         pref { it[PreferencesKeys.LIBRARY_TABS_ORDER] }
 
+    val disabledLibraryTabsFlow: Flow<Set<String>> =
+        pref { it[PreferencesKeys.DISABLED_LIBRARY_TABS] ?: emptySet() }
+
     suspend fun saveLibraryTabsOrder(order: String) {
         dataStore.edit { it[PreferencesKeys.LIBRARY_TABS_ORDER] = order }
     }
 
+    suspend fun setDisabledLibraryTabs(disabledTabs: Set<String>) {
+        dataStore.edit { it[PreferencesKeys.DISABLED_LIBRARY_TABS] = disabledTabs }
+    }
+
+    suspend fun saveLibraryTabsOrderAndDisabled(order: String, disabledTabs: Set<String>) {
+        dataStore.edit {
+            it[PreferencesKeys.LIBRARY_TABS_ORDER] = order
+            it[PreferencesKeys.DISABLED_LIBRARY_TABS] = disabledTabs
+        }
+    }
+
     suspend fun resetLibraryTabsOrder() {
-        dataStore.edit { it.remove(PreferencesKeys.LIBRARY_TABS_ORDER) }
+        dataStore.edit {
+            it.remove(PreferencesKeys.LIBRARY_TABS_ORDER)
+            it.remove(PreferencesKeys.DISABLED_LIBRARY_TABS)
+        }
     }
 
     suspend fun migrateTabOrder() {
@@ -900,9 +991,18 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
                 json.decodeFromString<MutableList<String>>(orderJson)
             }.getOrNull() ?: return@edit  // Abort on malformed data; don't overwrite user data.
 
+            var modified = false
             if ("FOLDERS" !in order) {
                 val insertAfter = order.indexOf("LIKED").takeIf { it != -1 } ?: order.lastIndex
                 order.add(insertAfter + 1, "FOLDERS")
+                modified = true
+            }
+            if ("SINGLES" !in order) {
+                val insertAfter = order.indexOf("ALBUMS").takeIf { it != -1 } ?: order.indexOf("SONGS").takeIf { it != -1 } ?: order.lastIndex
+                order.add(insertAfter + 1, "SINGLES")
+                modified = true
+            }
+            if (modified) {
                 preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = json.encodeToString(order)
             }
         }
@@ -978,6 +1078,13 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
 
     suspend fun setNavBarCompactMode(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.NAV_BAR_COMPACT_MODE] = enabled }
+    }
+
+    val songMenuIconsOnlyFlow: Flow<Boolean> =
+        pref { it[PreferencesKeys.SONG_MENU_ICONS_ONLY] ?: false }
+
+    suspend fun setSongMenuIconsOnly(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SONG_MENU_ICONS_ONLY] = enabled }
     }
 
     val libraryNavigationModeFlow: Flow<String> =

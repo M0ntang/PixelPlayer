@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -70,15 +72,20 @@ import androidx.compose.ui.text.style.TextOverflow
 @Composable
 fun ReorderTabsSheet(
     tabs: List<String>,
-    onReorder: (List<String>) -> Unit,
+    disabledTabs: Set<String> = emptySet(),
+    onSave: (order: List<String>, disabledTabs: Set<String>) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var showResetDialog by remember { mutableStateOf(false) }
-    var localTabs by remember { mutableStateOf(tabs) }
+    var localTabs by remember(tabs) { mutableStateOf(tabs) }
+    var localDisabledTabs by remember(disabledTabs) { mutableStateOf(disabledTabs) }
 
     LaunchedEffect(tabs) {
         localTabs = tabs
+    }
+    LaunchedEffect(disabledTabs) {
+        localDisabledTabs = disabledTabs
     }
 
     if (showResetDialog) {
@@ -91,6 +98,7 @@ fun ReorderTabsSheet(
                     onClick = {
                         onReset()
                         localTabs = tabs
+                        localDisabledTabs = emptySet()
                         showResetDialog = false
                     }
                 ) {
@@ -136,30 +144,34 @@ fun ReorderTabsSheet(
     ) {
         Scaffold(
             topBar = {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 26.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(horizontal = 26.dp, vertical = 8.dp)
                 ) {
                     Text(
                         stringResource(R.string.reorder_tabs_sheet_title),
                         style = MaterialTheme.typography.displaySmall,
                         fontFamily = GoogleSansRounded
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.reorder_tabs_sheet_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
             floatingActionButton = {
                 FloatingToolBar(
                     modifier = Modifier,
-                    onReset = { showResetDialog = true }, // This will now trigger the dialog
+                    onReset = { showResetDialog = true },
                     onDismiss = onDismiss,
                     onClick = {
                         scope.launch {
                             isLoading = true
-                            delay(700) // Simulate network/db operation
-                            onReorder(localTabs)
+                            delay(300)
+                            onSave(localTabs, localDisabledTabs)
                             isLoading = false
                             onDismiss()
                         }
@@ -188,6 +200,11 @@ fun ReorderTabsSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(localTabs, key = { it }) { tab ->
+                            val isEnabled = tab !in localDisabledTabs
+                            val enabledCount = localTabs.count { it !in localDisabledTabs }
+                            val isOnlyEnabledTab = isEnabled && enabledCount <= 1
+                            val tabModel = LibraryTabId.fromStableKey(tab)
+
                             ReorderableItem(reorderableState, key = tab) { isDragging ->
                                 LaunchedEffect(isDragging) {
                                     if (isDragging) {
@@ -203,24 +220,83 @@ fun ReorderTabsSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(CircleShape),
-                                    shadowElevation = 0.dp,
-                                    color = MaterialTheme.colorScheme.surfaceContainerLowest
+                                    shadowElevation = if (isDragging) 4.dp else 0.dp,
+                                    color = if (isEnabled) {
+                                        MaterialTheme.colorScheme.surfaceContainerLowest
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.5f)
+                                    }
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
                                             imageVector = Icons.Rounded.DragIndicator,
                                             contentDescription = stringResource(R.string.reorder_tabs_cd_drag_handle),
-                                            modifier = Modifier.draggableHandle()
+                                            modifier = Modifier.draggableHandle(),
+                                            tint = if (isEnabled) {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                            }
                                         )
-                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (isEnabled) {
+                                                        MaterialTheme.colorScheme.secondaryContainer
+                                                    } else {
+                                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                                    }
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = tabModel?.iconRes ?: R.drawable.rounded_music_note_24),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = if (isEnabled) {
+                                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                                }
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
                                         Text(
-                                            text = LibraryTabId.fromStableKey(tab)
-                                                ?.let { stringResource(it.labelRes) }
-                                                ?: tab,
-                                            style = MaterialTheme.typography.bodyLarge
+                                            text = tabModel?.let { stringResource(it.labelRes) } ?: tab,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            modifier = Modifier.weight(1f),
+                                            color = if (isEnabled) {
+                                                MaterialTheme.colorScheme.onSurface
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Switch(
+                                            checked = isEnabled,
+                                            enabled = !isOnlyEnabledTab,
+                                            onCheckedChange = { checked ->
+                                                localDisabledTabs = if (checked) {
+                                                    localDisabledTabs - tab
+                                                } else {
+                                                    if (!isOnlyEnabledTab) {
+                                                        localDisabledTabs + tab
+                                                    } else {
+                                                        localDisabledTabs
+                                                    }
+                                                }
+                                                performAppCompatHapticFeedback(
+                                                    view,
+                                                    appHapticsConfig,
+                                                    HapticFeedbackConstants.CLOCK_TICK
+                                                )
+                                            }
                                         )
                                     }
                                 }
@@ -232,6 +308,20 @@ fun ReorderTabsSheet(
         }
     }
 }
+
+@Composable
+fun ReorderTabsSheet(
+    tabs: List<String>,
+    onReorder: (List<String>) -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit
+) = ReorderTabsSheet(
+    tabs = tabs,
+    disabledTabs = emptySet(),
+    onSave = { order, _ -> onReorder(order) },
+    onReset = onReset,
+    onDismiss = onDismiss
+)
 
 @Composable
 fun FloatingToolBar(

@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.library
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.model.SortOption
@@ -14,12 +15,14 @@ enum class LibraryTabId(
     val stableKey: String,
     val label: String,
     @StringRes val labelRes: Int,
+    @DrawableRes val iconRes: Int,
     val sortOptions: List<SortOption>
 ) {
     Songs(
         stableKey = "SONGS",
         label = "SONGS",
         labelRes = R.string.library_tab_songs,
+        iconRes = R.drawable.rounded_music_note_24,
         sortOptions = listOf(
             SortOption.SongTitleAZ,
             SortOption.SongTitleZA,
@@ -37,6 +40,22 @@ enum class LibraryTabId(
         stableKey = "ALBUMS",
         label = "ALBUMS",
         labelRes = R.string.library_tab_albums,
+        iconRes = R.drawable.rounded_album_24,
+        sortOptions = listOf(
+            SortOption.AlbumTitleAZ,
+            SortOption.AlbumTitleZA,
+            SortOption.AlbumArtist,
+            SortOption.AlbumArtistDesc,
+            SortOption.AlbumReleaseYear,
+            SortOption.AlbumReleaseYearAsc,
+            SortOption.AlbumDateAdded
+        )
+    ),
+    Singles(
+        stableKey = "SINGLES",
+        label = "SINGLES",
+        labelRes = R.string.library_tab_singles,
+        iconRes = R.drawable.rounded_single_24,
         sortOptions = listOf(
             SortOption.AlbumTitleAZ,
             SortOption.AlbumTitleZA,
@@ -51,6 +70,7 @@ enum class LibraryTabId(
         stableKey = "ARTIST",
         label = "ARTIST",
         labelRes = R.string.library_tab_artists,
+        iconRes = R.drawable.rounded_artist_24,
         sortOptions = listOf(
             SortOption.ArtistNameAZ,
             SortOption.ArtistNameZA,
@@ -62,6 +82,7 @@ enum class LibraryTabId(
         stableKey = "PLAYLISTS",
         label = "PLAYLISTS",
         labelRes = R.string.library_tab_playlists,
+        iconRes = R.drawable.rounded_playlist_play_24,
         sortOptions = listOf(
             SortOption.PlaylistNameAZ,
             SortOption.PlaylistNameZA,
@@ -73,6 +94,7 @@ enum class LibraryTabId(
         stableKey = "FOLDERS",
         label = "FOLDERS",
         labelRes = R.string.library_tab_folders,
+        iconRes = R.drawable.rounded_folder_24,
         sortOptions = listOf(
             SortOption.FolderNameAZ,
             SortOption.FolderNameZA,
@@ -86,6 +108,7 @@ enum class LibraryTabId(
         stableKey = "LIKED",
         label = "LIKED",
         labelRes = R.string.library_tab_liked,
+        iconRes = R.drawable.round_favorite_24,
         sortOptions = listOf(
             SortOption.LikedSongTitleAZ,
             SortOption.LikedSongTitleZA,
@@ -114,4 +137,13 @@ internal fun decodeLibraryTabOrder(orderJson: String?): List<LibraryTabId> {
     storedKeys.mapNotNull { LibraryTabId.fromStableKey(it) }.forEach { ordered.add(it) }
     LibraryTabId.defaultOrder.forEach { ordered.add(it) }
     return ordered.toList()
+}
+
+internal fun decodeActiveLibraryTabs(
+    orderJson: String?,
+    disabledTabs: Set<String> = emptySet()
+): List<LibraryTabId> {
+    val fullOrder = decodeLibraryTabOrder(orderJson)
+    val active = fullOrder.filter { it.stableKey !in disabledTabs }
+    return active.ifEmpty { listOf(fullOrder.first()) }
 }

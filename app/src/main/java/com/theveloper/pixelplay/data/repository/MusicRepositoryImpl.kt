@@ -216,14 +216,19 @@ class MusicRepositoryImpl @Inject constructor(
     override fun getPaginatedAlbums(
         sortOption: SortOption,
         storageFilter: StorageFilter,
-        minTracks: Int
+        minTracks: Int,
+        excludeSingles: Boolean,
+        singlesMaxTracks: Int,
+        singlesMaxDurationMs: Long
     ): Flow<PagingData<Album>> {
         return combine(
             userPreferencesRepository.allowedDirectoriesFlow,
-            userPreferencesRepository.blockedDirectoriesFlow
-        ) { allowedDirs, blockedDirs ->
-            allowedDirs to blockedDirs
-        }.flatMapLatest { (allowedDirs, blockedDirs) ->
+            userPreferencesRepository.blockedDirectoriesFlow,
+            userPreferencesRepository.hiddenAlbumIdsFlow
+        ) { allowedDirs, blockedDirs, hiddenAlbumIds ->
+            Triple(allowedDirs, blockedDirs, hiddenAlbumIds)
+        }.flatMapLatest { (allowedDirs, blockedDirs, hiddenAlbumIds) ->
+            val hiddenSet = hiddenAlbumIds.mapNotNull { it.toLongOrNull() }.toSet()
             flow {
                 val (allowedParentDirs, applyDirectoryFilter) =
                     computeAllowedDirs(allowedDirs, blockedDirs)
@@ -236,14 +241,58 @@ class MusicRepositoryImpl @Inject constructor(
                                 applyDirectoryFilter = applyDirectoryFilter,
                                 filterMode = storageFilter.toFilterMode(),
                                 sortOrder = sortOption.storageKey,
-                                minTracks = minTracks
+                                minTracks = minTracks,
+                                excludeSingles = excludeSingles,
+                                singlesMaxTracks = singlesMaxTracks,
+                                singlesMaxDurationMs = singlesMaxDurationMs
                             )
                         }
                     ).flow
                 )
-            }.flatMapLatest { it }
-        }.map { pagingData ->
-            pagingData.map { entity -> entity.toAlbum() }
+            }.flatMapLatest { it }.map { pagingData ->
+                val filtered = if (hiddenSet.isEmpty()) pagingData else pagingData.filter { it.id !in hiddenSet }
+                filtered.map { entity -> entity.toAlbum() }
+            }
+        }.flowOn(Dispatchers.IO)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getPaginatedSingles(
+        sortOption: SortOption,
+        storageFilter: StorageFilter,
+        maxTracks: Int,
+        maxDurationMs: Long
+    ): Flow<PagingData<Album>> {
+        return combine(
+            userPreferencesRepository.allowedDirectoriesFlow,
+            userPreferencesRepository.blockedDirectoriesFlow,
+            userPreferencesRepository.hiddenAlbumIdsFlow
+        ) { allowedDirs, blockedDirs, hiddenAlbumIds ->
+            Triple(allowedDirs, blockedDirs, hiddenAlbumIds)
+        }.flatMapLatest { (allowedDirs, blockedDirs, hiddenAlbumIds) ->
+            val hiddenSet = hiddenAlbumIds.mapNotNull { it.toLongOrNull() }.toSet()
+            flow {
+                val (allowedParentDirs, applyDirectoryFilter) =
+                    computeAllowedDirs(allowedDirs, blockedDirs)
+                emit(
+                    Pager(
+                        config = defaultLibraryPagingConfig,
+                        pagingSourceFactory = {
+                            musicDao.getSinglesPaginated(
+                                allowedParentDirs = allowedParentDirs,
+                                applyDirectoryFilter = applyDirectoryFilter,
+                                filterMode = storageFilter.toFilterMode(),
+                                sortOrder = sortOption.storageKey,
+                                maxTracks = maxTracks,
+                                maxDurationMs = maxDurationMs
+                            )
+                        }
+                    ).flow
+                )
+            }.flatMapLatest { it }.map { pagingData ->
+                val filtered = if (hiddenSet.isEmpty()) pagingData else pagingData.filter { it.id !in hiddenSet }
+                filtered.map { entity -> entity.toAlbum() }
+            }
         }.flowOn(Dispatchers.IO)
     }
 
@@ -438,16 +487,65 @@ class MusicRepositoryImpl @Inject constructor(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override fun getAlbums(storageFilter: StorageFilter, minTracks: Int): Flow<List<Album>> {
+    override fun getAlbums(
+        storageFilter: StorageFilter,
+        minTracks: Int,
+        excludeSingles: Boolean,
+        singlesMaxTracks: Int,
+        singlesMaxDurationMs: Long
+    ): Flow<List<Album>> {
         return combine(
             userPreferencesRepository.allowedDirectoriesFlow,
-            userPreferencesRepository.blockedDirectoriesFlow
-        ) { allowedDirs, blockedDirs ->
-            allowedDirs to blockedDirs
-        }.flatMapLatest { (allowedDirs, blockedDirs) ->
+            userPreferencesRepository.blockedDirectoriesFlow,
+            userPreferencesRepository.hiddenAlbumIdsFlow
+        ) { allowedDirs, blockedDirs, hiddenAlbumIds ->
+            Triple(allowedDirs, blockedDirs, hiddenAlbumIds)
+        }.flatMapLatest { (allowedDirs, blockedDirs, hiddenAlbumIds) ->
             val (allowedParentDirs, applyFilter) = computeAllowedDirs(allowedDirs, blockedDirs)
-            musicDao.getAlbums(allowedParentDirs, applyFilter, storageFilter.toFilterMode(), minTracks)
-                .map { entities -> entities.map { it.toAlbum() } }
+            val hiddenSet = hiddenAlbumIds.mapNotNull { it.toLongOrNull() }.toSet()
+            musicDao.getAlbums(
+                allowedParentDirs,
+                applyFilter,
+                storageFilter.toFilterMode(),
+                minTracks,
+                excludeSingles,
+                singlesMaxTracks,
+                singlesMaxDurationMs
+            )
+                .map { entities ->
+                    val filtered = if (hiddenSet.isEmpty()) entities else entities.filter { it.id !in hiddenSet }
+                    filtered.map { it.toAlbum() }
+                }
+                .distinctUntilChanged()
+        }.conflate().flowOn(Dispatchers.IO)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getSingles(
+        storageFilter: StorageFilter,
+        maxTracks: Int,
+        maxDurationMs: Long
+    ): Flow<List<Album>> {
+        return combine(
+            userPreferencesRepository.allowedDirectoriesFlow,
+            userPreferencesRepository.blockedDirectoriesFlow,
+            userPreferencesRepository.hiddenAlbumIdsFlow
+        ) { allowedDirs, blockedDirs, hiddenAlbumIds ->
+            Triple(allowedDirs, blockedDirs, hiddenAlbumIds)
+        }.flatMapLatest { (allowedDirs, blockedDirs, hiddenAlbumIds) ->
+            val (allowedParentDirs, applyFilter) = computeAllowedDirs(allowedDirs, blockedDirs)
+            val hiddenSet = hiddenAlbumIds.mapNotNull { it.toLongOrNull() }.toSet()
+            musicDao.getSingles(
+                allowedParentDirs,
+                applyFilter,
+                storageFilter.toFilterMode(),
+                maxTracks,
+                maxDurationMs
+            )
+                .map { entities ->
+                    val filtered = if (hiddenSet.isEmpty()) entities else entities.filter { it.id !in hiddenSet }
+                    filtered.map { it.toAlbum() }
+                }
                 .distinctUntilChanged()
         }.conflate().flowOn(Dispatchers.IO)
     }

@@ -29,6 +29,7 @@ class ShufflePlaybackCallbacks(
     val scope: CoroutineScope,
     val currentStorageFilter: () -> StorageFilter,
     val albums: () -> List<Album>,
+    val singles: () -> List<Album> = { emptyList() },
     val artists: () -> List<Artist>,
     val playShuffled: (songs: List<Song>, queueName: String) -> Unit,
 )
@@ -217,6 +218,21 @@ class QueueStateHolder @Inject constructor(
             val albumSongs = musicRepository.getSongsForAlbum(randomAlbum.id).first()
             if (albumSongs.isNotEmpty()) {
                 callbacks.playShuffled(albumSongs, randomAlbum.title)
+            }
+        }
+    }
+
+    /**
+     * Picks a random single and plays it shuffled.
+     */
+    fun shuffleRandomSingle(callbacks: ShufflePlaybackCallbacks) {
+        callbacks.scope.launch {
+            val allSingles = callbacks.singles()
+            if (allSingles.isEmpty()) return@launch
+            val randomSingle = allSingles.random()
+            val singleSongs = musicRepository.getSongsForAlbum(randomSingle.id).first()
+            if (singleSongs.isNotEmpty()) {
+                callbacks.playShuffled(singleSongs, randomSingle.title)
             }
         }
     }
