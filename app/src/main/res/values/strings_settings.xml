@@ -202,6 +202,14 @@
     <string name="settings_header_cover_style_subtitle">Display style for covers in library grid and album/artist headers.</string>
     <string name="settings_header_cover_style_banner">Banner</string>
     <string name="settings_header_cover_style_square">Square 1:1</string>
+    <string name="settings_header_actions_layout_title">Header buttons layout</string>
+    <string name="settings_header_actions_layout_subtitle">Position of back and edit buttons in album and artist headers.</string>
+    <string name="settings_header_actions_layout_split">Default (Split)</string>
+    <string name="settings_header_actions_layout_split_desc">Back on left, edit on right; cover centered</string>
+    <string name="settings_header_actions_layout_all_left">All on left</string>
+    <string name="settings_header_actions_layout_all_left_desc">Buttons on left; larger cover on right</string>
+    <string name="settings_header_actions_layout_all_right">All on right</string>
+    <string name="settings_header_actions_layout_all_right_desc">Buttons on right; larger cover on left</string>
     <string name="settings_home_collage_section">Home Collage</string>
     <string name="settings_collage_pattern_title">Collage Pattern</string>
     <string name="settings_collage_pattern_subtitle">Choose the shape arrangement for the Your Mix collage.</string>

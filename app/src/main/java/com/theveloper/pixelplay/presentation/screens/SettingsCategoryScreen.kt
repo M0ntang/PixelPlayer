@@ -81,6 +81,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Science
@@ -164,6 +165,7 @@ import com.theveloper.pixelplay.data.preferences.AppThemeMode
 import com.theveloper.pixelplay.data.preferences.CollagePattern
 import com.theveloper.pixelplay.data.preferences.CarouselStyle
 import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
+import com.theveloper.pixelplay.data.preferences.HeaderActionsLayout
 import com.theveloper.pixelplay.data.preferences.LaunchTab
 import com.theveloper.pixelplay.data.preferences.LibraryNavigationMode
 import com.theveloper.pixelplay.data.preferences.NavBarStyle
@@ -636,6 +638,18 @@ fun SettingsCategoryScreen(
                                     selectedKey = uiState.headerCoverStyle,
                                     onSelectionChanged = { settingsViewModel.setHeaderCoverStyle(it) },
                                     leadingIcon = { Icon(Icons.Rounded.Album, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_header_actions_layout_title),
+                                    description = stringResource(R.string.settings_header_actions_layout_subtitle),
+                                    options = mapOf(
+                                        HeaderActionsLayout.SPLIT to stringResource(R.string.settings_header_actions_layout_split),
+                                        HeaderActionsLayout.ALL_LEFT to stringResource(R.string.settings_header_actions_layout_all_left),
+                                        HeaderActionsLayout.ALL_RIGHT to stringResource(R.string.settings_header_actions_layout_all_right)
+                                    ),
+                                    selectedKey = uiState.headerActionsLayout,
+                                    onSelectionChanged = { settingsViewModel.setHeaderActionsLayout(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.MoreVert, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
                             }
 

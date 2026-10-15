@@ -42,7 +42,9 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.zIndex
 import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
+import com.theveloper.pixelplay.data.preferences.HeaderActionsLayout
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -130,6 +132,7 @@ fun ArtistDetailScreen(
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
+    val headerActionsLayout by playerViewModel.headerActionsLayout.collectAsStateWithLifecycle()
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -165,7 +168,9 @@ fun ArtistDetailScreen(
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val minTopBarHeight = 64.dp + statusBarHeight
     val isSquareHeader = headerCoverStyle == HeaderCoverStyle.SQUARE
-    val maxTopBarHeight = if (isSquareHeader) statusBarHeight + 380.dp else 300.dp
+    val maxTopBarHeight = if (isSquareHeader) {
+        statusBarHeight + (if (headerActionsLayout == HeaderActionsLayout.SPLIT) 395.dp else 425.dp)
+    } else 300.dp
 
     val minTopBarHeightPx = with(density) { minTopBarHeight.toPx() }
     val maxTopBarHeightPx = with(density) { maxTopBarHeight.toPx() }
@@ -424,6 +429,7 @@ fun ArtistDetailScreen(
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
                             headerCoverStyle = headerCoverStyle,
+                            headerActionsLayout = headerActionsLayout,
                             hasCustomImage = !artist.customImageUri.isNullOrBlank(),
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = {
@@ -448,6 +454,7 @@ fun ArtistDetailScreen(
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
                             headerCoverStyle = headerCoverStyle,
+                            headerActionsLayout = headerActionsLayout,
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
@@ -746,6 +753,7 @@ private fun SharedArtistTopBarProbe(
     headerHeight: Dp,
     headerImageRequestSize: Size,
     headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
+    headerActionsLayout: String = HeaderActionsLayout.SPLIT,
     hasCustomImage: Boolean,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
@@ -755,8 +763,9 @@ private fun SharedArtistTopBarProbe(
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     var showImageMenu by remember { mutableStateOf(false) }
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val isDarkTheme = LocalPixelPlayDarkTheme.current
     val statusBarColor =
-        if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f)
+        if (isDarkTheme) Color.Black.copy(alpha = 0.6f)
         else Color.White.copy(alpha = 0.4f)
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedContentAlpha = 1f - solidAlpha
@@ -764,8 +773,24 @@ private fun SharedArtistTopBarProbe(
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
+
+    val vibrantColor = MaterialTheme.colorScheme.primary
+    val topAlpha = if (isDarkTheme) 0.55f else 0.35f
+    val vibrantBackgroundBrush = remember(vibrantColor, surfaceColor, topAlpha, expandedContentAlpha) {
+        Brush.verticalGradient(
+            0.0f to vibrantColor.copy(alpha = topAlpha * expandedContentAlpha).compositeOver(surfaceColor),
+            0.50f to vibrantColor.copy(alpha = (topAlpha * 0.45f) * expandedContentAlpha).compositeOver(surfaceColor),
+            0.78f to surfaceColor,
+            1.0f to surfaceColor
+        )
+    }
+    val vibrantTopColor = remember(vibrantColor, surfaceColor, topAlpha) {
+        vibrantColor.copy(alpha = topAlpha).compositeOver(surfaceColor)
+    }
     val fallbackStatusBarColor = if (isSquareMode) {
-        surfaceColor
+        remember(vibrantTopColor, surfaceColor, solidAlpha) {
+            lerpColor(vibrantTopColor, surfaceColor, solidAlpha)
+        }
     } else {
         remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
             lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
@@ -781,20 +806,38 @@ private fun SharedArtistTopBarProbe(
             .fillMaxWidth()
             .height(headerHeight)
             .background(surfaceColor)
+            .then(
+                if (isSquareMode) Modifier.background(vibrantBackgroundBrush) else Modifier
+            )
             .clipToBounds()
     ) {
         if (isSquareMode) {
             if (expandedContentAlpha > 0.01f) {
-                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(180.dp, 215.dp)
+                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+                val squareSize = if (headerActionsLayout == HeaderActionsLayout.SPLIT) {
+                    (screenWidth - 110.dp).coerceIn(190.dp, 240.dp)
+                } else {
+                    (screenWidth - 85.dp).coerceIn(215.dp, 270.dp)
+                }
                 val squareScale = 1f - (collapseFraction * 0.25f)
                 val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                val artworkAlignment = when (headerActionsLayout) {
+                    HeaderActionsLayout.ALL_LEFT -> Alignment.TopEnd
+                    HeaderActionsLayout.ALL_RIGHT -> Alignment.TopStart
+                    else -> Alignment.TopCenter
+                }
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(top = 44.dp),
-                    contentAlignment = Alignment.TopCenter
+                        .padding(
+                            top = 36.dp,
+                            start = if (headerActionsLayout == HeaderActionsLayout.ALL_RIGHT) 20.dp else 16.dp,
+                            end = if (headerActionsLayout == HeaderActionsLayout.ALL_LEFT) 20.dp else 16.dp
+                        ),
+                    contentAlignment = artworkAlignment
                 ) {
                     if (!displayUrl.isNullOrEmpty()) {
                         SmartImage(
@@ -872,6 +915,12 @@ private fun SharedArtistTopBarProbe(
             )
         }
 
+        val (collapsedTitleStartPadding, collapsedTitleEndPadding) = when (headerActionsLayout) {
+            HeaderActionsLayout.ALL_LEFT -> 108.dp to 24.dp
+            HeaderActionsLayout.ALL_RIGHT -> 24.dp to 108.dp
+            else -> 68.dp to 68.dp
+        }
+
         CollapsibleCommonTopBar(
             title = artist.name,
             subtitle = formatSongCount(songsCount),
@@ -879,9 +928,9 @@ private fun SharedArtistTopBarProbe(
             headerHeight = headerHeight,
             onBackClick = onBackPressed,
             containerColor = surfaceColor.copy(alpha = solidAlpha),
-            collapsedTitleStartPadding = 68.dp,
+            collapsedTitleStartPadding = collapsedTitleStartPadding,
             expandedTitleStartPadding = 24.dp,
-            collapsedTitleEndPadding = 88.dp,
+            collapsedTitleEndPadding = collapsedTitleEndPadding,
             expandedTitleEndPadding = 136.dp,
             containerHeightRange = (if (isSquareMode) 100.dp else 112.dp) to 56.dp,
             titleStyle = MaterialTheme.typography.headlineMedium.copy(
@@ -898,47 +947,140 @@ private fun SharedArtistTopBarProbe(
             subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant,
             fadeSubtitleOnCollapse = false,
             syncStatusBarWithContainer = false,
-            actions = {
-                Box(
-                    modifier = Modifier.padding(end = 12.dp, top = 4.dp)
-                ) {
+            customTopBarControls = {
+                val isExpanded = collapseFraction < 0.5f
+
+                val backButton: @Composable () -> Unit = {
                     FilledIconButton(
-                        onClick = { showImageMenu = true },
+                        onClick = onBackPressed,
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Edit,
-                            contentDescription = stringResource(R.string.artist_cd_edit_image)
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
+                }
 
-                    DropdownMenu(
-                        expanded = showImageMenu,
-                        onDismissRequest = { showImageMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.artist_action_change_photo)) },
-                            leadingIcon = {
-                                Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
-                            },
-                            onClick = {
-                                showImageMenu = false
-                                onChangeImage()
-                            }
-                        )
-                        if (hasCustomImage) {
+                val editImageButton: @Composable () -> Unit = {
+                    Box {
+                        FilledIconButton(
+                            onClick = { showImageMenu = true },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Edit,
+                                contentDescription = stringResource(R.string.artist_cd_edit_image)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showImageMenu,
+                            onDismissRequest = { showImageMenu = false }
+                        ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.artist_action_reset_to_default)) },
+                                text = { Text(stringResource(R.string.artist_action_change_photo)) },
                                 leadingIcon = {
-                                    Icon(Icons.Rounded.Delete, contentDescription = null)
+                                    Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                                 },
                                 onClick = {
                                     showImageMenu = false
-                                    onClearCustomImage()
+                                    onChangeImage()
                                 }
                             )
+                            if (hasCustomImage) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.artist_action_reset_to_default)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Rounded.Delete, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        showImageMenu = false
+                                        onClearCustomImage()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                when (headerActionsLayout) {
+                    HeaderActionsLayout.ALL_LEFT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editImageButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                backButton()
+                                editImageButton()
+                            }
+                        }
+                    }
+                    HeaderActionsLayout.ALL_RIGHT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editImageButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                editImageButton()
+                                backButton()
+                            }
+                        }
+                    }
+                    else -> { // SPLIT (Default)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 12.dp, top = 4.dp)
+                                .zIndex(1f)
+                        ) {
+                            backButton()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 12.dp, top = 4.dp)
+                                .zIndex(1f)
+                        ) {
+                            editImageButton()
                         }
                     }
                 }
@@ -975,6 +1117,7 @@ private fun CustomCollapsingTopBar(
     headerHeight: Dp,
     headerImageRequestSize: Size,
     headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
+    headerActionsLayout: String = HeaderActionsLayout.SPLIT,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
     onChangeImage: () -> Unit,
@@ -982,7 +1125,8 @@ private fun CustomCollapsingTopBar(
 ) {
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val statusBarColor = if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f)
+    val isDarkTheme = LocalPixelPlayDarkTheme.current
+    val statusBarColor = if (isDarkTheme) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f)
 
     // --- Animation Values ---
     val fabScale = 1f - collapseFraction
@@ -993,8 +1137,24 @@ private fun CustomCollapsingTopBar(
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
+
+    val vibrantColor = MaterialTheme.colorScheme.primary
+    val topAlpha = if (isDarkTheme) 0.55f else 0.35f
+    val vibrantBackgroundBrush = remember(vibrantColor, surfaceColor, topAlpha, headerContentAlpha) {
+        Brush.verticalGradient(
+            0.0f to vibrantColor.copy(alpha = topAlpha * headerContentAlpha).compositeOver(surfaceColor),
+            0.50f to vibrantColor.copy(alpha = (topAlpha * 0.45f) * headerContentAlpha).compositeOver(surfaceColor),
+            0.78f to surfaceColor,
+            1.0f to surfaceColor
+        )
+    }
+    val vibrantTopColor = remember(vibrantColor, surfaceColor, topAlpha) {
+        vibrantColor.copy(alpha = topAlpha).compositeOver(surfaceColor)
+    }
     val fallbackStatusBarColor = if (isSquareMode) {
-        surfaceColor
+        remember(vibrantTopColor, surfaceColor, solidAlpha) {
+            lerpColor(vibrantTopColor, surfaceColor, solidAlpha)
+        }
     } else {
         remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
             lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
@@ -1003,7 +1163,24 @@ private fun CustomCollapsingTopBar(
 
     // Title animation
     val titleScale = lerp(1f, 0.75f, collapseFraction)
-    val titlePaddingStart = lerp(24.dp, 58.dp, collapseFraction)
+    val titlePaddingStart = lerp(
+        24.dp,
+        when (headerActionsLayout) {
+            HeaderActionsLayout.ALL_LEFT -> 108.dp
+            HeaderActionsLayout.ALL_RIGHT -> 24.dp
+            else -> 68.dp
+        },
+        collapseFraction
+    )
+    val titlePaddingEnd = lerp(
+        120.dp,
+        when (headerActionsLayout) {
+            HeaderActionsLayout.ALL_RIGHT -> 108.dp
+            HeaderActionsLayout.ALL_LEFT -> 24.dp
+            else -> 68.dp
+        },
+        collapseFraction
+    )
     val titleMaxLines = if(collapseFraction < 0.5f) 2 else 1
     val titleVerticalBias = lerp(1f, -1f, collapseFraction)
     val animatedTitleAlignment = BiasAlignment(horizontalBias = -1f, verticalBias = titleVerticalBias)
@@ -1024,20 +1201,38 @@ private fun CustomCollapsingTopBar(
                 .fillMaxWidth()
                 .height(headerHeight)
                 .background(surfaceColor)
+                .then(
+                    if (isSquareMode) Modifier.background(vibrantBackgroundBrush) else Modifier
+                )
         ) {
             if (isSquareMode) {
                 if (showExpandedArtwork) {
                     val displayUrl = effectiveImageUrl?.takeIf { it.isNotBlank() }
-                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(180.dp, 215.dp)
+                    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+                    val squareSize = if (headerActionsLayout == HeaderActionsLayout.SPLIT) {
+                        (screenWidth - 110.dp).coerceIn(190.dp, 240.dp)
+                    } else {
+                        (screenWidth - 85.dp).coerceIn(215.dp, 270.dp)
+                    }
                     val squareScale = 1f - (collapseFraction * 0.25f)
                     val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                    val artworkAlignment = when (headerActionsLayout) {
+                        HeaderActionsLayout.ALL_LEFT -> Alignment.TopEnd
+                        HeaderActionsLayout.ALL_RIGHT -> Alignment.TopStart
+                        else -> Alignment.TopCenter
+                    }
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(top = 44.dp),
-                        contentAlignment = Alignment.TopCenter
+                            .padding(
+                                top = 36.dp,
+                                start = if (headerActionsLayout == HeaderActionsLayout.ALL_RIGHT) 20.dp else 16.dp,
+                                end = if (headerActionsLayout == HeaderActionsLayout.ALL_LEFT) 20.dp else 16.dp
+                            ),
+                        contentAlignment = artworkAlignment
                     ) {
                         if (!displayUrl.isNullOrEmpty()) {
                             AsyncImage(
@@ -1121,28 +1316,29 @@ private fun CustomCollapsingTopBar(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                FilledIconButton(
-                    modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 4.dp),
-                    onClick = onBackPressed,
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                ) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                val isExpanded = collapseFraction < 0.5f
+
+                val backButton: @Composable () -> Unit = {
+                    FilledIconButton(
+                        onClick = onBackPressed,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                    }
                 }
 
-                // Image edit button (visible only when header is mostly expanded)
-                if (collapseFraction < 0.5f) {
+                val editImageButton: @Composable () -> Unit = {
                     var showImageMenu by remember { mutableStateOf(false) }
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(end = 12.dp, top = 4.dp)
-                            .graphicsLayer { alpha = 1f - (collapseFraction * 4).coerceAtMost(1f) }
-                    ) {
-                        SmallFloatingActionButton(
+                    Box {
+                        FilledIconButton(
                             onClick = { showImageMenu = true },
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            contentColor = MaterialTheme.colorScheme.onSurface,
-                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
                         ) {
                             Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.artist_cd_edit_image))
                         }
@@ -1172,6 +1368,81 @@ private fun CustomCollapsingTopBar(
                     }
                 }
 
+                when (headerActionsLayout) {
+                    HeaderActionsLayout.ALL_LEFT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editImageButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                backButton()
+                                editImageButton()
+                            }
+                        }
+                    }
+                    HeaderActionsLayout.ALL_RIGHT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editImageButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                editImageButton()
+                                backButton()
+                            }
+                        }
+                    }
+                    else -> { // SPLIT (Default)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 12.dp, top = 4.dp)
+                                .zIndex(1f)
+                        ) {
+                            backButton()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 12.dp, top = 4.dp)
+                                .zIndex(1f)
+                        ) {
+                            editImageButton()
+                        }
+                    }
+                }
+
                 // Box contenedor para el título
                 Box(
                     modifier = Modifier
@@ -1183,7 +1454,7 @@ private fun CustomCollapsingTopBar(
                     Column(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .padding(start = titlePaddingStart, end = 120.dp)
+                            .padding(start = titlePaddingStart, end = titlePaddingEnd)
                             .graphicsLayer {
                                 scaleX = titleScale
                                 scaleY = titleScale

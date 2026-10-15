@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4-beta] - 2026-10-15
+
+### Added
+- **Dynamic Header Action Buttons Layout:** Added configurable button positioning in Experimental Settings (`SPLIT`, `ALL_LEFT`, `ALL_RIGHT`).
+- **Dynamic Artwork Alignment & Scaling:** When header action buttons are grouped on one side (left or right), the square album/artist cover dynamically shifts to the opposite side and increases in size up to 270dp for a bold, expressive look without layout collisions.
+- **Atmospheric Vibrant Gradient Background:** Added a rich, atmospheric top gradient behind square cover artwork derived from the album/artist color palette, flowing seamlessly into the title section.
+
+### Changed
+- **Streamlined Header Controls:** Removed redundant three-dots menu buttons from album and artist detail headers in favor of a clean, direct edit pencil action.
+- **Adaptive Collapsed Title Padding:** Collapsed top bar titles dynamically compute start/end insets to prevent text clipping regardless of button alignment mode.
+
 ## [0.8.0-beta] - 2026-10-14
 
 ### Added

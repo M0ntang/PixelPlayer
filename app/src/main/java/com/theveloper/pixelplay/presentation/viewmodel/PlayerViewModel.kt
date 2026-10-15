@@ -51,6 +51,7 @@ import com.theveloper.pixelplay.data.model.toLibraryTabIdOrNull
 import com.theveloper.pixelplay.data.provider.SharedArtworkContentProvider
 import com.theveloper.pixelplay.data.preferences.CarouselStyle
 import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
+import com.theveloper.pixelplay.data.preferences.HeaderActionsLayout
 import com.theveloper.pixelplay.data.preferences.LibraryNavigationMode
 import com.theveloper.pixelplay.data.preferences.NavBarStyle
 import com.theveloper.pixelplay.data.preferences.FullPlayerLoadingTweaks
@@ -495,6 +496,13 @@ class PlayerViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = HeaderCoverStyle.GRADIENT_BANNER
+        )
+
+    val headerActionsLayout: StateFlow<String> = userPreferencesRepository.headerActionsLayoutFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = HeaderActionsLayout.SPLIT
         )
 
     val hasActiveAiProviderApiKey: StateFlow<Boolean> = combine(
@@ -2559,6 +2567,12 @@ class PlayerViewModel @Inject constructor(
     fun setAlbumsListView(isList: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setAlbumsListView(isList)
+        }
+    }
+
+    fun setHeaderActionsLayout(layout: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setHeaderActionsLayout(layout)
         }
     }
 

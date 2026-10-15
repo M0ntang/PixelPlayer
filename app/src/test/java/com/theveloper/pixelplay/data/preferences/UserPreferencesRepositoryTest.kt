@@ -4,9 +4,9 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
 import java.nio.file.Files
 
 class UserPreferencesRepositoryTest {
@@ -129,4 +129,29 @@ class UserPreferencesRepositoryTest {
             tempDir.toFile().deleteRecursively()
         }
     }
+
+    @Test
+    fun `headerActionsLayoutFlow returns default SPLIT and updates correctly`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            assertEquals(HeaderActionsLayout.SPLIT, repository.headerActionsLayoutFlow.first())
+
+            repository.setHeaderActionsLayout(HeaderActionsLayout.ALL_LEFT)
+            assertEquals(HeaderActionsLayout.ALL_LEFT, repository.headerActionsLayoutFlow.first())
+
+            repository.setHeaderActionsLayout(HeaderActionsLayout.ALL_RIGHT)
+            assertEquals(HeaderActionsLayout.ALL_RIGHT, repository.headerActionsLayoutFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
 }
+

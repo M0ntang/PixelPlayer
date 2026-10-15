@@ -69,7 +69,9 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.zIndex
 import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
+import com.theveloper.pixelplay.data.preferences.HeaderActionsLayout
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -139,6 +141,7 @@ fun AlbumDetailScreen(
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
+    val headerActionsLayout by playerViewModel.headerActionsLayout.collectAsStateWithLifecycle()
 
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showEditAlbumSheet by remember { mutableStateOf(false) }
@@ -217,7 +220,9 @@ fun AlbumDetailScreen(
                 val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
                 val minTopBarHeight = 64.dp + statusBarHeight
                 val isSquareHeader = headerCoverStyle == HeaderCoverStyle.SQUARE
-                val maxTopBarHeight = if (isSquareHeader) statusBarHeight + 380.dp else 300.dp
+                val maxTopBarHeight = if (isSquareHeader) {
+                    statusBarHeight + (if (headerActionsLayout == HeaderActionsLayout.SPLIT) 395.dp else 425.dp)
+                } else 300.dp
 
                 val minTopBarHeightPx = with(density) { minTopBarHeight.toPx() }
                 val maxTopBarHeightPx = with(density) { maxTopBarHeight.toPx() }
@@ -416,6 +421,7 @@ fun AlbumDetailScreen(
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
                             headerCoverStyle = headerCoverStyle,
+                            headerActionsLayout = headerActionsLayout,
                             onHeaderArtworkState = { state ->
                                 if (state is AsyncImagePainter.State.Success) {
                                     headerArtworkLoaded = true
@@ -438,6 +444,7 @@ fun AlbumDetailScreen(
                             headerHeight = currentTopBarHeightDp,
                             headerImageRequestSize = headerImageRequestSize,
                             headerCoverStyle = headerCoverStyle,
+                            headerActionsLayout = headerActionsLayout,
                             onHeaderArtworkState = { state ->
                                 if (state is AsyncImagePainter.State.Success) {
                                     headerArtworkLoaded = true
@@ -583,6 +590,7 @@ private fun SharedAlbumTopBarProbe(
     headerHeight: Dp,
     headerImageRequestSize: Size,
     headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
+    headerActionsLayout: String = HeaderActionsLayout.SPLIT,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
@@ -590,16 +598,33 @@ private fun SharedAlbumTopBarProbe(
 ) {
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val isDarkTheme = LocalPixelPlayDarkTheme.current
     val statusBarColor =
-        if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f)
+        if (isDarkTheme) Color.Black.copy(alpha = 0.6f)
         else Color.White.copy(alpha = 0.4f)
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedContentAlpha = 1f - solidAlpha
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
+
+    val vibrantColor = MaterialTheme.colorScheme.primary
+    val topAlpha = if (isDarkTheme) 0.55f else 0.35f
+    val vibrantBackgroundBrush = remember(vibrantColor, surfaceColor, topAlpha, expandedContentAlpha) {
+        Brush.verticalGradient(
+            0.0f to vibrantColor.copy(alpha = topAlpha * expandedContentAlpha).compositeOver(surfaceColor),
+            0.50f to vibrantColor.copy(alpha = (topAlpha * 0.45f) * expandedContentAlpha).compositeOver(surfaceColor),
+            0.78f to surfaceColor,
+            1.0f to surfaceColor
+        )
+    }
+    val vibrantTopColor = remember(vibrantColor, surfaceColor, topAlpha) {
+        vibrantColor.copy(alpha = topAlpha).compositeOver(surfaceColor)
+    }
     val fallbackStatusBarColor = if (isSquareMode) {
-        surfaceColor
+        remember(vibrantTopColor, surfaceColor, solidAlpha) {
+            lerpColor(vibrantTopColor, surfaceColor, solidAlpha)
+        }
     } else {
         remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
             lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
@@ -623,20 +648,38 @@ private fun SharedAlbumTopBarProbe(
             .fillMaxWidth()
             .height(headerHeight)
             .background(surfaceColor)
+            .then(
+                if (isSquareMode) Modifier.background(vibrantBackgroundBrush) else Modifier
+            )
             .clipToBounds()
     ) {
         if (isSquareMode) {
             if (expandedContentAlpha > 0.01f) {
-                val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(180.dp, 215.dp)
+                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+                val squareSize = if (headerActionsLayout == HeaderActionsLayout.SPLIT) {
+                    (screenWidth - 110.dp).coerceIn(190.dp, 240.dp)
+                } else {
+                    (screenWidth - 85.dp).coerceIn(215.dp, 270.dp)
+                }
                 val squareScale = 1f - (collapseFraction * 0.25f)
                 val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                val artworkAlignment = when (headerActionsLayout) {
+                    HeaderActionsLayout.ALL_LEFT -> Alignment.TopEnd
+                    HeaderActionsLayout.ALL_RIGHT -> Alignment.TopStart
+                    else -> Alignment.TopCenter
+                }
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(top = 44.dp),
-                    contentAlignment = Alignment.TopCenter
+                        .padding(
+                            top = 36.dp,
+                            start = if (headerActionsLayout == HeaderActionsLayout.ALL_RIGHT) 20.dp else 16.dp,
+                            end = if (headerActionsLayout == HeaderActionsLayout.ALL_LEFT) 20.dp else 16.dp
+                        ),
+                    contentAlignment = artworkAlignment
                 ) {
                     SmartImage(
                         model = album.albumArtUriString,
@@ -690,6 +733,12 @@ private fun SharedAlbumTopBarProbe(
             )
         }
 
+        val (collapsedTitleStartPadding, collapsedTitleEndPadding) = when (headerActionsLayout) {
+            HeaderActionsLayout.ALL_LEFT -> 108.dp to 24.dp
+            HeaderActionsLayout.ALL_RIGHT -> 24.dp to 108.dp
+            else -> 68.dp to 68.dp
+        }
+
         CollapsibleCommonTopBar(
             title = album.title,
             subtitle = subtitleText,
@@ -697,9 +746,9 @@ private fun SharedAlbumTopBarProbe(
             headerHeight = headerHeight,
             onBackClick = onBackPressed,
             containerColor = surfaceColor.copy(alpha = solidAlpha),
-            collapsedTitleStartPadding = 68.dp,
+            collapsedTitleStartPadding = collapsedTitleStartPadding,
             expandedTitleStartPadding = 24.dp,
-            collapsedTitleEndPadding = 112.dp,
+            collapsedTitleEndPadding = collapsedTitleEndPadding,
             expandedTitleEndPadding = 136.dp,
             containerHeightRange = (if (isSquareMode) 100.dp else 112.dp) to 56.dp,
             titleStyle = MaterialTheme.typography.headlineMedium.copy(
@@ -716,17 +765,30 @@ private fun SharedAlbumTopBarProbe(
             subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant,
             fadeSubtitleOnCollapse = false,
             syncStatusBarWithContainer = false,
-            actions = {
-                var showMenu by remember { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier.padding(end = 12.dp, top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            customTopBarControls = {
+                val isExpanded = collapseFraction < 0.5f
+
+                val backButton: @Composable () -> Unit = {
+                    FilledIconButton(
+                        onClick = onBackPressed,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.common_back)
+                        )
+                    }
+                }
+
+                val editPencilButton: @Composable () -> Unit = {
                     FilledIconButton(
                         onClick = onEditClick,
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(
@@ -734,32 +796,79 @@ private fun SharedAlbumTopBarProbe(
                             contentDescription = stringResource(R.string.edit_album_title)
                         )
                     }
-                    Box {
-                        FilledIconButton(
-                            onClick = { showMenu = true },
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.MoreVert,
-                                contentDescription = stringResource(R.string.edit_album_title)
-                            )
+                }
+
+                when (headerActionsLayout) {
+                    HeaderActionsLayout.ALL_LEFT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editPencilButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                backButton()
+                                editPencilButton()
+                            }
                         }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
+                    }
+                    HeaderActionsLayout.ALL_RIGHT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editPencilButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                editPencilButton()
+                                backButton()
+                            }
+                        }
+                    }
+                    else -> { // SPLIT (Default)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 12.dp, top = 4.dp)
+                                .zIndex(1f)
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.edit_album_title)) },
-                                leadingIcon = {
-                                    Icon(Icons.Rounded.Edit, contentDescription = null)
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onEditClick()
-                                }
-                            )
+                            backButton()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 12.dp, top = 4.dp)
+                                .zIndex(1f)
+                        ) {
+                            editPencilButton()
                         }
                     }
                 }
@@ -799,6 +908,7 @@ private fun CollapsingAlbumTopBar(
     headerHeight: Dp,
     headerImageRequestSize: Size,
     headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
+    headerActionsLayout: String = HeaderActionsLayout.SPLIT,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
@@ -806,8 +916,9 @@ private fun CollapsingAlbumTopBar(
 ) {
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val isDarkTheme = LocalPixelPlayDarkTheme.current
     val statusBarColor =
-        if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(
+        if (isDarkTheme) Color.Black.copy(alpha = 0.6f) else Color.White.copy(
             alpha = 0.4f
         )
 
@@ -820,8 +931,24 @@ private fun CollapsingAlbumTopBar(
     val expandedStatusBarFallback = remember(statusBarColor, surfaceColor) {
         statusBarColor.compositeOver(surfaceColor)
     }
+
+    val vibrantColor = MaterialTheme.colorScheme.primary
+    val topAlpha = if (isDarkTheme) 0.55f else 0.35f
+    val vibrantBackgroundBrush = remember(vibrantColor, surfaceColor, topAlpha, headerContentAlpha) {
+        Brush.verticalGradient(
+            0.0f to vibrantColor.copy(alpha = topAlpha * headerContentAlpha).compositeOver(surfaceColor),
+            0.50f to vibrantColor.copy(alpha = (topAlpha * 0.45f) * headerContentAlpha).compositeOver(surfaceColor),
+            0.78f to surfaceColor,
+            1.0f to surfaceColor
+        )
+    }
+    val vibrantTopColor = remember(vibrantColor, surfaceColor, topAlpha) {
+        vibrantColor.copy(alpha = topAlpha).compositeOver(surfaceColor)
+    }
     val fallbackStatusBarColor = if (isSquareMode) {
-        surfaceColor
+        remember(vibrantTopColor, surfaceColor, solidAlpha) {
+            lerpColor(vibrantTopColor, surfaceColor, solidAlpha)
+        }
     } else {
         remember(expandedStatusBarFallback, surfaceColor, solidAlpha) {
             lerpColor(expandedStatusBarFallback, surfaceColor, solidAlpha)
@@ -830,7 +957,24 @@ private fun CollapsingAlbumTopBar(
 
     // Title animation
     val titleScale = lerp(1f, 0.75f, collapseFraction)
-    val titlePaddingStart = lerp(24.dp, 58.dp, collapseFraction)
+    val titlePaddingStart = lerp(
+        24.dp,
+        when (headerActionsLayout) {
+            HeaderActionsLayout.ALL_LEFT -> 108.dp
+            HeaderActionsLayout.ALL_RIGHT -> 24.dp
+            else -> 68.dp
+        },
+        collapseFraction
+    )
+    val titlePaddingEnd = lerp(
+        120.dp,
+        when (headerActionsLayout) {
+            HeaderActionsLayout.ALL_RIGHT -> 108.dp
+            HeaderActionsLayout.ALL_LEFT -> 24.dp
+            else -> 68.dp
+        },
+        collapseFraction
+    )
     val titleMaxLines = if (collapseFraction < 0.5f) 2 else 1
     val titleVerticalBias = lerp(1f, -1f, collapseFraction)
     val animatedTitleAlignment =
@@ -851,19 +995,37 @@ private fun CollapsingAlbumTopBar(
                 .fillMaxWidth()
                 .height(headerHeight)
                 .background(surfaceColor)
+                .then(
+                    if (isSquareMode) Modifier.background(vibrantBackgroundBrush) else Modifier
+                )
         ) {
             if (isSquareMode) {
                 if (showExpandedArtwork) {
-                    val squareSize = (LocalConfiguration.current.screenWidthDp.dp - 140.dp).coerceIn(180.dp, 215.dp)
+                    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+                    val squareSize = if (headerActionsLayout == HeaderActionsLayout.SPLIT) {
+                        (screenWidth - 110.dp).coerceIn(190.dp, 240.dp)
+                    } else {
+                        (screenWidth - 85.dp).coerceIn(215.dp, 270.dp)
+                    }
                     val squareScale = 1f - (collapseFraction * 0.25f)
                     val squareAlpha = (1f - collapseFraction * 1.6f).coerceIn(0f, 1f)
+
+                    val artworkAlignment = when (headerActionsLayout) {
+                        HeaderActionsLayout.ALL_LEFT -> Alignment.TopEnd
+                        HeaderActionsLayout.ALL_RIGHT -> Alignment.TopStart
+                        else -> Alignment.TopCenter
+                    }
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(top = 44.dp),
-                        contentAlignment = Alignment.TopCenter
+                            .padding(
+                                top = 36.dp,
+                                start = if (headerActionsLayout == HeaderActionsLayout.ALL_RIGHT) 20.dp else 16.dp,
+                                end = if (headerActionsLayout == HeaderActionsLayout.ALL_LEFT) 20.dp else 16.dp
+                            ),
+                        contentAlignment = artworkAlignment
                     ) {
                         SmartImage(
                             model = album.albumArtUriString,
@@ -922,28 +1084,29 @@ private fun CollapsingAlbumTopBar(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                FilledIconButton(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 12.dp, top = 4.dp),
-                    onClick = onBackPressed,
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                ) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                val isExpanded = collapseFraction < 0.5f
+
+                val backButton: @Composable () -> Unit = {
+                    FilledIconButton(
+                        onClick = onBackPressed,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.common_back)
+                        )
+                    }
                 }
 
-                var showMenu by remember { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(end = 12.dp, top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                val editPencilButton: @Composable () -> Unit = {
                     FilledIconButton(
                         onClick = onEditClick,
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(
@@ -951,32 +1114,79 @@ private fun CollapsingAlbumTopBar(
                             contentDescription = stringResource(R.string.edit_album_title)
                         )
                     }
-                    Box {
-                        FilledIconButton(
-                            onClick = { showMenu = true },
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.MoreVert,
-                                contentDescription = stringResource(R.string.edit_album_title)
-                            )
+                }
+
+                when (headerActionsLayout) {
+                    HeaderActionsLayout.ALL_LEFT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editPencilButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                backButton()
+                                editPencilButton()
+                            }
                         }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
+                    }
+                    HeaderActionsLayout.ALL_RIGHT -> {
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                backButton()
+                                editPencilButton()
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                editPencilButton()
+                                backButton()
+                            }
+                        }
+                    }
+                    else -> { // SPLIT (Default)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 12.dp, top = 4.dp)
+                                .zIndex(1f)
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.edit_album_title)) },
-                                leadingIcon = {
-                                    Icon(Icons.Rounded.Edit, contentDescription = null)
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onEditClick()
-                                }
-                            )
+                            backButton()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 12.dp, top = 4.dp)
+                                .zIndex(1f)
+                        ) {
+                            editPencilButton()
                         }
                     }
                 }
@@ -991,7 +1201,7 @@ private fun CollapsingAlbumTopBar(
                     Column(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .padding(start = titlePaddingStart, end = 120.dp)
+                            .padding(start = titlePaddingStart, end = titlePaddingEnd)
                             .graphicsLayer {
                                 scaleX = titleScale
                                 scaleY = titleScale

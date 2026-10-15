@@ -202,6 +202,14 @@
     <string name="settings_header_cover_style_subtitle">Отображение обложек в сетке библиотеки и в заголовках альбомов/исполнителей.</string>
     <string name="settings_header_cover_style_banner">Баннер</string>
     <string name="settings_header_cover_style_square">Квадрат 1:1</string>
+    <string name="settings_header_actions_layout_title">Расположение кнопок заголовка</string>
+    <string name="settings_header_actions_layout_subtitle">Положение кнопок «Назад» и редактирования в заголовках альбомов и исполнителей.</string>
+    <string name="settings_header_actions_layout_split">По умолчанию (раздельно)</string>
+    <string name="settings_header_actions_layout_split_desc">Кнопка «Назад» слева, карандаш справа; обложка по центру</string>
+    <string name="settings_header_actions_layout_all_left">Все слева</string>
+    <string name="settings_header_actions_layout_all_left_desc">Кнопки слева; увеличенная обложка справа</string>
+    <string name="settings_header_actions_layout_all_right">Все справа</string>
+    <string name="settings_header_actions_layout_all_right_desc">Кнопки справа; увеличенная обложка слева</string>
     <string name="settings_home_collage_section">Коллаж на главной</string>
     <string name="settings_collage_pattern_title">Шаблон коллажа</string>
     <string name="settings_collage_pattern_subtitle">Выберите расположение элементов в коллаже «Ваш микс».</string>

@@ -2,6 +2,7 @@ package com.theveloper.pixelplay.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,6 +58,7 @@ fun CollapsibleCommonTopBar(
     titleMinWidthAxis: Float = 78f,
     syncStatusBarWithContainer: Boolean = true,
     supportingContent: (@Composable () -> Unit)? = null,
+    customTopBarControls: (@Composable BoxScope.() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // Logic from GenreDetailScreen:
@@ -112,32 +114,36 @@ fun CollapsibleCommonTopBar(
                 supportingContent = supportingContent
             )
 
-            FilledIconButton(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 12.dp, top = 4.dp)
-                    .zIndex(1f),
-                onClick = onBackClick,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    contentColor = MaterialTheme.colorScheme.onSurface 
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back)
-                )
-            }
+            if (customTopBarControls != null) {
+                customTopBarControls()
+            } else {
+                FilledIconButton(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 12.dp, top = 4.dp)
+                        .zIndex(1f),
+                    onClick = onBackClick,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        contentColor = MaterialTheme.colorScheme.onSurface 
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.common_back)
+                    )
+                }
 
-            // Actions (e.g. Equalizer toggle)
-            androidx.compose.foundation.layout.Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 4.dp) // Align with back button
-                    .zIndex(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                actions()
+                // Actions (e.g. Equalizer toggle)
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp) // Align with back button
+                        .zIndex(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    actions()
+                }
             }
         }
     }

@@ -43,7 +43,11 @@ import androidx.compose.material.icons.rounded.Rectangle
 import androidx.compose.material.icons.rounded.Title
 import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.BlurOn
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.ui.text.font.FontWeight
+import com.theveloper.pixelplay.data.preferences.HeaderActionsLayout
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -786,6 +790,89 @@ fun ExperimentalSettingsScreen(
                                    }
                                }
                            }
+                        }
+                    }
+                }
+            }
+
+            item(key = "header_actions_layout_section") {
+                val currentLayout = uiState.headerActionsLayout
+                val layouts = listOf(
+                    Triple(
+                        HeaderActionsLayout.SPLIT,
+                        stringResource(R.string.settings_header_actions_layout_split),
+                        stringResource(R.string.settings_header_actions_layout_split_desc)
+                    ),
+                    Triple(
+                        HeaderActionsLayout.ALL_LEFT,
+                        stringResource(R.string.settings_header_actions_layout_all_left),
+                        stringResource(R.string.settings_header_actions_layout_all_left_desc)
+                    ),
+                    Triple(
+                        HeaderActionsLayout.ALL_RIGHT,
+                        stringResource(R.string.settings_header_actions_layout_all_right),
+                        stringResource(R.string.settings_header_actions_layout_all_right_desc)
+                    )
+                )
+
+                SettingsSection(
+                    title = stringResource(R.string.settings_header_actions_layout_title),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.padding(horizontal = 0.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            layouts.forEach { (key, title, subtitle) ->
+                                val isSelected = key == currentLayout
+                                Surface(
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = { settingsViewModel.setHeaderActionsLayout(key) }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                                            .fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = title,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                            Text(
+                                                text = subtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Check,
+                                                contentDescription = stringResource(R.string.common_selected),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
