@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.8-beta] - 2026-10-19
+
+### Fixed
+- **Library Infinite Pager Crash:** Fixed `IllegalArgumentException: Key "SINGLES" was already used` crash when opening library in compact navigation mode by restoring unique page index keys in `HorizontalPager`.
+
 ## [0.8.7-beta] - 2026-10-19
 
 ### Performance & Smoothness
