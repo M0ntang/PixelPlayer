@@ -158,6 +158,9 @@ class TransitionController @Inject constructor(
                     repeatMode,
                 )
                 engine.cancelNext()
+                if (engine.isSingleDiscMode && repeatMode != Player.REPEAT_MODE_ALL) {
+                    engine.setPauseAtEndOfMediaItems(true)
+                }
                 return@launch
             }
 

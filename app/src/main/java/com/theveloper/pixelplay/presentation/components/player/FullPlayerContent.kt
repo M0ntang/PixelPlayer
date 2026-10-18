@@ -1301,10 +1301,12 @@ private fun predictSkipNextCarouselIndex(
     if (isSingleDiscMode) {
         val candidateSong = queue[candidateIndex]
         val sameAlbum = currentSong.album.isNotBlank() && currentSong.album.equals(candidateSong.album, ignoreCase = true)
-        val discChanged = sameAlbum && (currentSong.discNumber != candidateSong.discNumber)
+        val currDisc = currentSong.discNumber ?: 1
+        val candDisc = candidateSong.discNumber ?: 1
+        val discChanged = sameAlbum && (currDisc != candDisc)
         if (discChanged) {
             val firstDiscIndex = queue.indexOfFirst {
-                it.album.equals(currentSong.album, ignoreCase = true) && it.discNumber == currentSong.discNumber
+                it.album.equals(currentSong.album, ignoreCase = true) && (it.discNumber ?: 1) == currDisc
             }
             return if (firstDiscIndex >= 0) firstDiscIndex else null
         }
@@ -1335,16 +1337,18 @@ private fun predictSkipPreviousCarouselIndex(
     if (isSingleDiscMode) {
         val candidateSong = queue[candidateIndex]
         val sameAlbum = currentSong.album.isNotBlank() && currentSong.album.equals(candidateSong.album, ignoreCase = true)
-        val discChanged = sameAlbum && (currentSong.discNumber != candidateSong.discNumber)
+        val currDisc = currentSong.discNumber ?: 1
+        val candDisc = candidateSong.discNumber ?: 1
+        val discChanged = sameAlbum && (currDisc != candDisc)
         if (discChanged) {
             return if (repeatMode == Player.REPEAT_MODE_ALL) {
                 val lastDiscIndex = queue.indexOfLast {
-                    it.album.equals(currentSong.album, ignoreCase = true) && it.discNumber == currentSong.discNumber
+                    it.album.equals(currentSong.album, ignoreCase = true) && (it.discNumber ?: 1) == currDisc
                 }
                 if (lastDiscIndex >= 0) lastDiscIndex else null
             } else {
                 val firstDiscIndex = queue.indexOfFirst {
-                    it.album.equals(currentSong.album, ignoreCase = true) && it.discNumber == currentSong.discNumber
+                    it.album.equals(currentSong.album, ignoreCase = true) && (it.discNumber ?: 1) == currDisc
                 }
                 if (firstDiscIndex >= 0) firstDiscIndex else null
             }

@@ -151,7 +151,6 @@ class MediaControllerSyncStateHolder @Inject constructor(
                     ?.takeIf { it.isNotBlank() }
 
         return when {
-            metadataArtwork == null && song.albumArtUriString != null -> song.copy(albumArtUriString = null)
             metadataArtwork != null && song.albumArtUriString != metadataArtwork ->
                 song.copy(albumArtUriString = metadataArtwork)
             else -> song

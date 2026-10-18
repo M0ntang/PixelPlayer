@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.9-beta] - 2026-10-19
+
+### Fixed
+- **Single Disc End-of-Disc Auto Stop:** Corrected auto-advance and crossfade transitions in `DualPlayerEngine` and `TransitionController` so that when the last track of a disc ends naturally, playback stops immediately (or loops back to track 1 when repeat mode is ALL) instead of advancing into the next disc.
+- **Album Cover Disappearing Bug:** Fixed regression in `MediaControllerSyncStateHolder.normalizeArtworkForResolvedSong` where null artwork in media item metadata erroneously erased existing song album art throughout the playback queue and carousel.
+- **Carousel Large Jump Glitch:** Added smooth intermediate snapping in `AlbumCarouselSelection` for non-adjacent skips (such as looping back to track 1 from the end of a disc), eliminating multi-page reverse spin and visual layout jitter.
+- **Disc Number Extra Fallback:** Hardened disc number extraction across `PlaybackStateHolder`, `MusicService`, and `DualPlayerEngine` to check both standard media metadata and extras bundles.
+
 ## [0.8.8-beta] - 2026-10-19
 
 ### Fixed

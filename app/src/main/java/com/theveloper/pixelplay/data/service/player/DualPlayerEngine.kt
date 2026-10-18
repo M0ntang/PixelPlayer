@@ -250,6 +250,7 @@ class DualPlayerEngine @Inject constructor(
     var hiFiModeEnabled: Boolean = false
         private set
     private var audioOffloadEnabled = !shouldDisableAudioOffloadByDefault()
+    var isSingleDiscMode: Boolean = false
     private var transitionJob: Job? = null
     private var bufferingFallbackJob: Job? = null
     private var transitionRunning = false
@@ -1161,6 +1162,26 @@ class DualPlayerEngine @Inject constructor(
         if (::playerA.isInitialized) {
             playerA.pauseAtEndOfMediaItems = shouldPause
         }
+        playerB?.pauseAtEndOfMediaItems = shouldPause
+    }
+
+    private fun getDiscNumber(item: MediaItem): Int {
+        return item.mediaMetadata.discNumber?.takeIf { it > 0 }
+            ?: item.mediaMetadata.extras?.getInt("discNumber")?.takeIf { it > 0 }
+            ?: 1
+    }
+
+    private fun findFirstMediaItemIndexForDisc(snapshot: List<MediaItem>, album: String?, discNumber: Int): Int {
+        if (album.isNullOrBlank()) return C.INDEX_UNSET
+        for (i in snapshot.indices) {
+            val item = snapshot[i]
+            val disc = getDiscNumber(item)
+            val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
+            if (disc == discNumber && itemAlbum.equals(album, ignoreCase = true)) {
+                return i
+            }
+        }
+        return C.INDEX_UNSET
     }
 
     fun getNextTransitionTarget(currentMediaItem: MediaItem, repeatMode: Int): TransitionTarget? {
@@ -1170,15 +1191,45 @@ class DualPlayerEngine @Inject constructor(
         val currentAbsoluteIndex = resolveCurrentAbsoluteIndex(currentMediaItem, snapshot)
         if (currentAbsoluteIndex == C.INDEX_UNSET) return null
 
-        val targetIndex = when (repeatMode) {
-            Player.REPEAT_MODE_ONE -> currentAbsoluteIndex
-            else -> currentAbsoluteIndex + 1
+        if (repeatMode == Player.REPEAT_MODE_ONE) {
+            return TransitionTarget(
+                mediaItem = currentMediaItem,
+                absoluteIndex = currentAbsoluteIndex,
+                queueSize = snapshot.size
+            )
         }
 
-        val targetItem = snapshot.getOrNull(targetIndex) ?: return null
+        val currentDisc = getDiscNumber(currentMediaItem)
+        val currentAlbum = currentMediaItem.mediaMetadata.albumTitle?.toString()?.trim()
+
+        val nextIndex = currentAbsoluteIndex + 1
+        val candidateItem = snapshot.getOrNull(nextIndex)
+
+        if (isSingleDiscMode && !currentAlbum.isNullOrBlank()) {
+            val candidateDisc = candidateItem?.let { getDiscNumber(it) }
+            val candidateAlbum = candidateItem?.mediaMetadata?.albumTitle?.toString()?.trim()
+            val sameAlbum = !candidateAlbum.isNullOrBlank() && currentAlbum.equals(candidateAlbum, ignoreCase = true)
+            val discBoundaryCrossed = candidateItem == null || (sameAlbum && currentDisc != candidateDisc)
+
+            if (discBoundaryCrossed) {
+                if (repeatMode == Player.REPEAT_MODE_ALL) {
+                    val firstIndex = findFirstMediaItemIndexForDisc(snapshot, currentAlbum, currentDisc)
+                    if (firstIndex != C.INDEX_UNSET) {
+                        return TransitionTarget(
+                            mediaItem = snapshot[firstIndex],
+                            absoluteIndex = firstIndex,
+                            queueSize = snapshot.size
+                        )
+                    }
+                }
+                return null
+            }
+        }
+
+        val targetItem = candidateItem ?: return null
         return TransitionTarget(
             mediaItem = targetItem,
-            absoluteIndex = targetIndex,
+            absoluteIndex = nextIndex,
             queueSize = snapshot.size
         )
     }

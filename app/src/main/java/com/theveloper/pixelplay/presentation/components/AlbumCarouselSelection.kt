@@ -152,6 +152,14 @@ fun AlbumCarouselSection(
             } else {
                 programmaticScrollInProgress = true
                 try {
+                    val pageDiff = effectiveTargetIndex - currentPage
+                    if (kotlin.math.abs(pageDiff) > 1) {
+                        // For large jumps (e.g. looping back to track 1 of a disc or queue seek),
+                        // snap to the adjacent item first so we animate cleanly across 1 page
+                        // instead of spinning through the entire queue and thrashing layouts.
+                        val intermediatePage = if (pageDiff > 0) effectiveTargetIndex - 1 else effectiveTargetIndex + 1
+                        carouselState.pagerState.scrollToPage(intermediatePage)
+                    }
                     carouselState.animateScrollToItem(effectiveTargetIndex, animationSpec = carouselAnimationSpec)
                 } finally {
                     programmaticScrollInProgress = false

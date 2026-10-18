@@ -504,13 +504,13 @@ class PlaybackStateHolder @Inject constructor(
                     val currentIndex = controller.currentMediaItemIndex
                     if (currentIndex != C.INDEX_UNSET && currentIndex in 0 until controller.mediaItemCount) {
                         val currentItem = controller.getMediaItemAt(currentIndex)
-                        val currentDisc = currentItem.mediaMetadata.discNumber ?: 1
+                        val currentDisc = getDiscNumber(currentItem)
                         val currentAlbum = currentItem.mediaMetadata.albumTitle?.toString()?.trim()
 
                         val prevIndex = controller.previousMediaItemIndex
                         if (prevIndex != C.INDEX_UNSET) {
                             val prevItem = controller.getMediaItemAt(prevIndex)
-                            val prevDisc = prevItem.mediaMetadata.discNumber ?: 1
+                            val prevDisc = getDiscNumber(prevItem)
                             val prevAlbum = prevItem.mediaMetadata.albumTitle?.toString()?.trim()
 
                             val sameAlbum = !currentAlbum.isNullOrBlank() && currentAlbum.equals(prevAlbum, ignoreCase = true)
@@ -553,13 +553,13 @@ class PlaybackStateHolder @Inject constructor(
                 val currentIndex = controller.currentMediaItemIndex
                 if (currentIndex != C.INDEX_UNSET && currentIndex in 0 until controller.mediaItemCount) {
                     val currentItem = controller.getMediaItemAt(currentIndex)
-                    val currentDisc = currentItem.mediaMetadata.discNumber ?: 1
+                    val currentDisc = getDiscNumber(currentItem)
                     val currentAlbum = currentItem.mediaMetadata.albumTitle?.toString()?.trim()
 
                     val nextIndex = controller.nextMediaItemIndex
                     if (nextIndex != C.INDEX_UNSET) {
                         val nextItem = controller.getMediaItemAt(nextIndex)
-                        val nextDisc = nextItem.mediaMetadata.discNumber ?: 1
+                        val nextDisc = getDiscNumber(nextItem)
                         val nextAlbum = nextItem.mediaMetadata.albumTitle?.toString()?.trim()
 
                         val sameAlbum = !currentAlbum.isNullOrBlank() && currentAlbum.equals(nextAlbum, ignoreCase = true)
@@ -588,11 +588,18 @@ class PlaybackStateHolder @Inject constructor(
         }
     }
 
+    private fun getDiscNumber(item: MediaItem?): Int {
+        if (item == null) return 1
+        return item.mediaMetadata.discNumber?.takeIf { it > 0 }
+            ?: item.mediaMetadata.extras?.getInt("discNumber")?.takeIf { it > 0 }
+            ?: 1
+    }
+
     private fun findFirstMediaItemIndexForDisc(player: Player, album: String?, discNumber: Int): Int {
         if (album.isNullOrBlank()) return C.INDEX_UNSET
         for (i in 0 until player.mediaItemCount) {
             val item = player.getMediaItemAt(i)
-            val itemDisc = item.mediaMetadata.discNumber ?: 1
+            val itemDisc = getDiscNumber(item)
             val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
             if (itemDisc == discNumber && itemAlbum.equals(album, ignoreCase = true)) {
                 return i
@@ -605,7 +612,7 @@ class PlaybackStateHolder @Inject constructor(
         if (album.isNullOrBlank()) return C.INDEX_UNSET
         for (i in player.mediaItemCount - 1 downTo 0) {
             val item = player.getMediaItemAt(i)
-            val itemDisc = item.mediaMetadata.discNumber ?: 1
+            val itemDisc = getDiscNumber(item)
             val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
             if (itemDisc == discNumber && itemAlbum.equals(album, ignoreCase = true)) {
                 return i

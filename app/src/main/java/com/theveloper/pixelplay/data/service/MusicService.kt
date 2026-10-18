@@ -324,6 +324,7 @@ class MusicService : MediaLibraryService() {
     }
 
     private val playerSwapListener: (Player) -> Unit = { newPlayer ->
+        lastActiveMediaItem = newPlayer.currentMediaItem
         publishMediaSessionPlayer(newPlayer, "Swapped MediaSession player to new instance.")
         replayGainProcessor.prepareForTransition(newPlayer)
     }
@@ -533,6 +534,7 @@ class MusicService : MediaLibraryService() {
         serviceScope.launch {
             userPreferencesRepository.isSingleDiscModeFlow.collect { enabled ->
                 isSingleDiscMode = enabled
+                engine.isSingleDiscMode = enabled
             }
         }
 
@@ -1425,9 +1427,9 @@ class MusicService : MediaLibraryService() {
             }
 
             if (isSingleDiscMode && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && lastActiveMediaItem != null) {
-                val prevDisc = lastActiveMediaItem?.mediaMetadata?.discNumber ?: 1
+                val prevDisc = getDiscNumber(lastActiveMediaItem)
                 val prevAlbum = lastActiveMediaItem?.mediaMetadata?.albumTitle?.toString()?.trim()
-                val newDisc = mediaItem?.mediaMetadata?.discNumber ?: 1
+                val newDisc = getDiscNumber(mediaItem)
                 val newAlbum = mediaItem?.mediaMetadata?.albumTitle?.toString()?.trim()
 
                 val sameAlbum = !prevAlbum.isNullOrBlank() && prevAlbum.equals(newAlbum, ignoreCase = true)
@@ -1455,6 +1457,30 @@ class MusicService : MediaLibraryService() {
                 }
             }
             lastActiveMediaItem = mediaItem
+
+            // Proactively set pauseAtEndOfMediaItems if playing the last track of the current disc in single disc mode
+            val master = engine.masterPlayer
+            if (isSingleDiscMode && mediaItem != null && master.repeatMode != Player.REPEAT_MODE_ALL) {
+                val currentDisc = getDiscNumber(mediaItem)
+                val currentAlbum = mediaItem.mediaMetadata.albumTitle?.toString()?.trim()
+                val nextIndex = master.nextMediaItemIndex
+                val isLastTrackOfDisc = if (nextIndex == C.INDEX_UNSET) {
+                    true
+                } else {
+                    val nextItem = runCatching { master.getMediaItemAt(nextIndex) }.getOrNull()
+                    if (nextItem == null) {
+                        true
+                    } else {
+                        val nextDisc = getDiscNumber(nextItem)
+                        val nextAlbum = nextItem.mediaMetadata.albumTitle?.toString()?.trim()
+                        val sameAlbum = !currentAlbum.isNullOrBlank() && currentAlbum.equals(nextAlbum, ignoreCase = true)
+                        sameAlbum && currentDisc != nextDisc
+                    }
+                }
+                engine.setPauseAtEndOfMediaItems(isLastTrackOfDisc)
+            } else {
+                engine.setPauseAtEndOfMediaItems(false)
+            }
 
             replayGainProcessor.apply(mediaSession?.player?.currentMediaItem)
             // Pre-fetch RG for the track after this one so it's cached when needed
@@ -1509,12 +1535,20 @@ class MusicService : MediaLibraryService() {
         }
     }
 
+    private fun getDiscNumber(item: MediaItem?): Int {
+        if (item == null) return 1
+        return item.mediaMetadata.discNumber?.takeIf { it > 0 }
+            ?: item.mediaMetadata.extras?.getInt("discNumber")?.takeIf { it > 0 }
+            ?: 1
+    }
+
     private fun findFirstMediaItemIndexForDisc(player: Player, album: String?, discNumber: Int): Int {
         if (album.isNullOrBlank()) return androidx.media3.common.C.INDEX_UNSET
-        val count = player.mediaItemCount
+        val items = if (engine.isUsingWindowedQueue()) engine.getFullQueue() else null
+        val count = items?.size ?: player.mediaItemCount
         for (i in 0 until count) {
-            val item = player.getMediaItemAt(i)
-            val disc = item.mediaMetadata.discNumber ?: 1
+            val item = items?.get(i) ?: player.getMediaItemAt(i)
+            val disc = getDiscNumber(item)
             val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
             if (disc == discNumber && itemAlbum.equals(album, ignoreCase = true)) {
                 return i
