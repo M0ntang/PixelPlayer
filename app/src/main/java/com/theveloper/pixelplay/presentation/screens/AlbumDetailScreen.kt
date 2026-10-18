@@ -520,14 +520,14 @@ fun AlbumDetailScreen(
         if (showSongInfoBottomSheet && selectedSongForInfo != null) {
             val currentSong = selectedSongForInfo
             val isFavorite = remember(currentSong?.id, favoriteIds) {
-                derivedStateOf { currentSong?.let { favoriteIds.contains(it.id) } }
-            }.value ?: false
+                currentSong?.let { favoriteIds.contains(it.id) } ?: false
+            }
 
             if (currentSong != null) {
                 val currentAlbumId = uiState.album?.id?.toString() ?: albumId
                 val isSongHiddenInAlbum = remember(currentAlbumId, currentSong.id, hiddenAlbumSongKeys) {
-                    derivedStateOf { "${currentAlbumId}_${currentSong.id}" in hiddenAlbumSongKeys }
-                }.value
+                    "${currentAlbumId}_${currentSong.id}" in hiddenAlbumSongKeys
+                }
 
                 val removeFromListTrigger = remember(uiState.songs) {
                     {

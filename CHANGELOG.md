@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.7-beta] - 2026-10-19
+
+### Performance & Smoothness
+- **Navigation Transition Optimization:** Shifted transition blur and layer transforms in `ScreenWrapper` to execute purely in the GPU draw phase using `RenderEffect`, eliminating full-screen recompositions and frame drops across navigation gestures.
+- **Synced Lyrics Recomposition Fix:** Isolated playback position updates in `SyncedLyricsList` so only the active line updates instead of triggering full list recompositions every 100ms.
+- **Scrim Gradient GC Reduction:** Replaced repetitive dynamic allocations in `SmoothScrim` with precomputed static float arrays, dramatically reducing memory churn and micro-stutters during list and grid scrolling.
+- **Star FAB & State Allocations:** Cached `RoundedStarShape` and simplified state derivations in artist and album detail screens to prevent unnecessary object allocations.
+- **Library HorizontalPager Stability:** Switched to semantic tab keys in `HorizontalPager` to reliably maintain page state and avoid item loss or reload glitches during tab navigation.
+
+### Fixed
+- **DataStore Emission Storm:** Added `distinctUntilChanged` to base preference flows, preventing single-preference mutations from flooding the entire StateFlow pipeline.
+- **Single Disc Boundary & Carousel Prediction:** Corrected disc-boundary checks to strictly verify album identity and return to the first track of the disc. Synchronized optimistic carousel skip prediction with single disc mode to prevent navigation jitter.
+- **Hidden Songs in Random Shuffles:** Ensured `shuffleRandomAlbum` and `shuffleRandomSingle` properly respect hidden track filters.
+- **Native Resource Cleanup:** Wrapped native `MediaExtractor` usage in `try-finally` blocks within `AudioMetaUtils` to prevent file descriptor leaks.
+- **Code Cleanup:** Removed duplicated `BottomToggleRow` implementations and redundant lifecycle listeners.
+
 ## [0.8.6-beta] - 2026-10-18
 
 ### Added

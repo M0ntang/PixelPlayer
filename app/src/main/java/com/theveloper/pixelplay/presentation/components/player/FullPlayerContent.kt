@@ -428,6 +428,7 @@ fun FullPlayerContent(
     val latestCurrentQueueIndex by rememberUpdatedState(currentQueueIndex)
     val latestRepeatMode by rememberUpdatedState(repeatMode)
     val latestIsRemotePlaybackActive by rememberUpdatedState(isRemotePlaybackActive)
+    val latestIsSingleDiscMode by rememberUpdatedState(fullPlayerSlice.isSingleDiscMode)
     val latestCurrentPositionProvider by rememberUpdatedState(currentPositionProvider)
     val latestOnNext by rememberUpdatedState(onNext)
     val latestOnPrevious by rememberUpdatedState(onPrevious)
@@ -468,14 +469,16 @@ fun FullPlayerContent(
                 currentIndex = baseIndex,
                 queue = queueSnapshot,
                 repeatMode = latestRepeatMode,
-                isRemotePlaybackActive = latestIsRemotePlaybackActive
+                isRemotePlaybackActive = latestIsRemotePlaybackActive,
+                isSingleDiscMode = latestIsSingleDiscMode
             )
             SkipDirection.PREVIOUS -> predictSkipPreviousCarouselIndex(
                 currentIndex = baseIndex,
                 queue = queueSnapshot,
                 currentPositionMs = latestCurrentPositionProvider(),
                 repeatMode = latestRepeatMode,
-                isRemotePlaybackActive = latestIsRemotePlaybackActive
+                isRemotePlaybackActive = latestIsRemotePlaybackActive,
+                isSingleDiscMode = latestIsSingleDiscMode
             )
         }
     }
@@ -1282,16 +1285,32 @@ private fun predictSkipNextCarouselIndex(
     currentIndex: Int?,
     queue: ImmutableList<Song>,
     repeatMode: Int,
-    isRemotePlaybackActive: Boolean
+    isRemotePlaybackActive: Boolean,
+    isSingleDiscMode: Boolean = false
 ): Int? {
     if (isRemotePlaybackActive || queue.size <= 1) return null
     val safeCurrentIndex = currentIndex?.takeIf { it in queue.indices } ?: return null
+    val currentSong = queue[safeCurrentIndex]
 
-    return when {
+    val candidateIndex = when {
         safeCurrentIndex < queue.lastIndex -> safeCurrentIndex + 1
         repeatMode == Player.REPEAT_MODE_ALL -> 0
         else -> null
+    } ?: return null
+
+    if (isSingleDiscMode) {
+        val candidateSong = queue[candidateIndex]
+        val sameAlbum = currentSong.album.isNotBlank() && currentSong.album.equals(candidateSong.album, ignoreCase = true)
+        val discChanged = sameAlbum && (currentSong.discNumber != candidateSong.discNumber)
+        if (discChanged) {
+            val firstDiscIndex = queue.indexOfFirst {
+                it.album.equals(currentSong.album, ignoreCase = true) && it.discNumber == currentSong.discNumber
+            }
+            return if (firstDiscIndex >= 0) firstDiscIndex else null
+        }
     }
+
+    return candidateIndex
 }
 
 private fun predictSkipPreviousCarouselIndex(
@@ -1299,17 +1318,40 @@ private fun predictSkipPreviousCarouselIndex(
     queue: ImmutableList<Song>,
     currentPositionMs: Long,
     repeatMode: Int,
-    isRemotePlaybackActive: Boolean
+    isRemotePlaybackActive: Boolean,
+    isSingleDiscMode: Boolean = false
 ): Int? {
     if (isRemotePlaybackActive || queue.size <= 1) return null
     if (currentPositionMs > PREVIOUS_TRACK_RESTART_THRESHOLD_MS) return null
     val safeCurrentIndex = currentIndex?.takeIf { it in queue.indices } ?: return null
+    val currentSong = queue[safeCurrentIndex]
 
-    return when {
+    val candidateIndex = when {
         safeCurrentIndex > 0 -> safeCurrentIndex - 1
         repeatMode == Player.REPEAT_MODE_ALL -> queue.lastIndex
         else -> null
+    } ?: return null
+
+    if (isSingleDiscMode) {
+        val candidateSong = queue[candidateIndex]
+        val sameAlbum = currentSong.album.isNotBlank() && currentSong.album.equals(candidateSong.album, ignoreCase = true)
+        val discChanged = sameAlbum && (currentSong.discNumber != candidateSong.discNumber)
+        if (discChanged) {
+            return if (repeatMode == Player.REPEAT_MODE_ALL) {
+                val lastDiscIndex = queue.indexOfLast {
+                    it.album.equals(currentSong.album, ignoreCase = true) && it.discNumber == currentSong.discNumber
+                }
+                if (lastDiscIndex >= 0) lastDiscIndex else null
+            } else {
+                val firstDiscIndex = queue.indexOfFirst {
+                    it.album.equals(currentSong.album, ignoreCase = true) && it.discNumber == currentSong.discNumber
+                }
+                if (firstDiscIndex >= 0) firstDiscIndex else null
+            }
+        }
     }
+
+    return candidateIndex
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -2553,120 +2595,3 @@ private fun expressiveSkipButtonColors(colorScheme: ColorScheme): TransportButto
     )
 }
 
-@Composable
-private fun BottomToggleRow(
-    modifier: Modifier,
-    isShuffleEnabled: Boolean,
-    isShuffleTransitionInProgress: Boolean,
-    repeatMode: Int,
-    isFavoriteProvider: () -> Boolean,
-    isSingleDiscMode: Boolean,
-    showSingleDiscButton: Boolean,
-    onShuffleToggle: () -> Unit,
-    onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit,
-    onSingleDiscToggle: () -> Unit
-) {
-    val isFavorite = isFavoriteProvider()
-    val rowCorners = 60.dp
-    val inactiveBg = LocalMaterialTheme.current.onSurface.copy(alpha = 0.07f)
-    val inactiveContentColor = LocalMaterialTheme.current.onSurface
-
-
-    Box(
-        modifier = modifier.background(
-            color = LocalMaterialTheme.current.surfaceContainerLowest.copy(alpha = 0.7f),
-            shape = AbsoluteSmoothCornerShape(
-                cornerRadiusBL = rowCorners,
-                smoothnessAsPercentTR = 60,
-                cornerRadiusBR = rowCorners,
-                smoothnessAsPercentBL = 60,
-                cornerRadiusTL = rowCorners,
-                smoothnessAsPercentBR = 60,
-                cornerRadiusTR = rowCorners,
-                smoothnessAsPercentTL = 60
-            )
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(6.dp)
-                .clip(
-                    AbsoluteSmoothCornerShape(
-                        cornerRadiusBL = rowCorners,
-                        smoothnessAsPercentTR = 60,
-                        cornerRadiusBR = rowCorners,
-                        smoothnessAsPercentBL = 60,
-                        cornerRadiusTL = rowCorners,
-                        smoothnessAsPercentBR = 60,
-                        cornerRadiusTR = rowCorners,
-                        smoothnessAsPercentTL = 60
-                    )
-                )
-                .background(Color.Transparent),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val commonModifier = Modifier.weight(1f)
-
-            ToggleSegmentButton(
-                modifier = commonModifier,
-                active = isShuffleEnabled,
-                enabled = !isShuffleTransitionInProgress,
-                activeColor = LocalMaterialTheme.current.primaryFixed,
-                activeCornerRadius = rowCorners,
-                activeContentColor = LocalMaterialTheme.current.onPrimaryFixed,
-                inactiveColor = inactiveBg,
-                inactiveContentColor = inactiveContentColor,
-                onClick = onShuffleToggle,
-                iconId = R.drawable.rounded_shuffle_24,
-                contentDesc = "Aleatorio"
-            )
-            val repeatActive = repeatMode != Player.REPEAT_MODE_OFF
-            val repeatIcon = when (repeatMode) {
-                Player.REPEAT_MODE_ONE -> R.drawable.rounded_repeat_one_24
-                Player.REPEAT_MODE_ALL -> R.drawable.rounded_repeat_24
-                else -> R.drawable.rounded_repeat_24
-            }
-            ToggleSegmentButton(
-                modifier = commonModifier,
-                active = repeatActive,
-                activeColor = LocalMaterialTheme.current.secondaryFixed,
-                activeCornerRadius = rowCorners,
-                activeContentColor = LocalMaterialTheme.current.onSecondaryFixed,
-                inactiveColor = inactiveBg,
-                inactiveContentColor = inactiveContentColor,
-                onClick = onRepeatToggle,
-                iconId = repeatIcon,
-                contentDesc = "Repetir"
-            )
-            ToggleSegmentButton(
-                modifier = commonModifier,
-                active = isFavorite,
-                activeColor = LocalMaterialTheme.current.tertiaryFixed,
-                activeCornerRadius = rowCorners,
-                activeContentColor = LocalMaterialTheme.current.onTertiaryFixed,
-                inactiveColor = inactiveBg,
-                inactiveContentColor = inactiveContentColor,
-                onClick = onFavoriteToggle,
-                iconId = if (isFavorite) R.drawable.round_favorite_24 else R.drawable.rounded_favorite_24,
-                contentDesc = "Favorito"
-            )
-            if (showSingleDiscButton) {
-                ToggleSegmentButton(
-                    modifier = commonModifier,
-                    active = isSingleDiscMode,
-                    activeColor = LocalMaterialTheme.current.primaryContainer,
-                    activeCornerRadius = rowCorners,
-                    activeContentColor = LocalMaterialTheme.current.onPrimaryContainer,
-                    inactiveColor = inactiveBg,
-                    inactiveContentColor = inactiveContentColor,
-                    onClick = onSingleDiscToggle,
-                    iconId = R.drawable.rounded_disc_one_24,
-                    contentDesc = stringResource(R.string.player_single_disc_mode)
-                )
-            }
-        }
-    }
-}

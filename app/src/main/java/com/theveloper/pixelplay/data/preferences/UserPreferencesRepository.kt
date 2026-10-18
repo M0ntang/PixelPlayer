@@ -264,7 +264,7 @@ class UserPreferencesRepository @Inject constructor(
 
     /** Shorthand to map a single value out of the DataStore. */
     private fun <T> pref(transform: (Preferences) -> T): Flow<T> =
-        dataStore.data.map(transform)
+        dataStore.data.map(transform).distinctUntilChanged()
 
     /** Decode a JSON string preference, returning [default] on missing or malformed data. */
     private inline fun <reified T> decodeJsonPref(

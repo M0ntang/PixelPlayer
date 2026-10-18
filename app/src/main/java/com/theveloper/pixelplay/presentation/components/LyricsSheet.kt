@@ -121,6 +121,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -324,46 +326,46 @@ fun LyricsSheet(
 
     // Read lyrics alignment preference internally from DataStore
     val lyricsAlignmentFlow = remember(context) {
-        context.dataStore.data.map { it[stringPreferencesKey("lyrics_alignment")] ?: "left" }
+        context.dataStore.data.map { it[stringPreferencesKey("lyrics_alignment")] ?: "left" }.distinctUntilChanged()
     }
     val lyricsAlignment by lyricsAlignmentFlow.collectAsStateWithLifecycle(initialValue = "left")
 
     // Read lyrics translation preference internally from DataStore
     val showLyricsTranslationFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("show_lyrics_translation")] ?: true }
+        context.dataStore.data.map { it[booleanPreferencesKey("show_lyrics_translation")] ?: true }.distinctUntilChanged()
     }
     val showLyricsTranslation by showLyricsTranslationFlow.collectAsStateWithLifecycle(initialValue = true)
 
     // Read lyrics romanization preference internally from DataStore
     val showLyricsRomanizationFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("show_lyrics_romanization")] ?: true }
+        context.dataStore.data.map { it[booleanPreferencesKey("show_lyrics_romanization")] ?: true }.distinctUntilChanged()
     }
     val showLyricsRomanization by showLyricsRomanizationFlow.collectAsStateWithLifecycle(initialValue = true)
 
     // Read animated lyrics preference internally from DataStore
     val useAnimatedLyricsFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("use_animated_lyrics")] ?: false }
+        context.dataStore.data.map { it[booleanPreferencesKey("use_animated_lyrics")] ?: false }.distinctUntilChanged()
     }
     val useAnimatedLyrics by useAnimatedLyricsFlow.collectAsStateWithLifecycle(initialValue = false)
 
     val animatedLyricsBlurEnabledFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("animated_lyrics_blur_enabled")] ?: true }
+        context.dataStore.data.map { it[booleanPreferencesKey("animated_lyrics_blur_enabled")] ?: true }.distinctUntilChanged()
     }
     val animatedLyricsBlurEnabled by animatedLyricsBlurEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
 
     val disableBlurAllOverFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("disable_blur_all_over")] ?: false }
+        context.dataStore.data.map { it[booleanPreferencesKey("disable_blur_all_over")] ?: false }.distinctUntilChanged()
     }
     val disableBlurAllOver by disableBlurAllOverFlow.collectAsStateWithLifecycle(initialValue = false)
 
     val animatedLyricsBlurStrengthFlow = remember(context) {
-        context.dataStore.data.map { it[androidx.datastore.preferences.core.floatPreferencesKey("animated_lyrics_blur_strength")] ?: 2.5f }
+        context.dataStore.data.map { it[androidx.datastore.preferences.core.floatPreferencesKey("animated_lyrics_blur_strength")] ?: 2.5f }.distinctUntilChanged()
     }
     val animatedLyricsBlurStrength by animatedLyricsBlurStrengthFlow.collectAsStateWithLifecycle(initialValue = 2.5f)
 
     // Read keep-screen-on preference from DataStore
     val keepScreenOnFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("keep_screen_on_lyrics")] ?: false }
+        context.dataStore.data.map { it[booleanPreferencesKey("keep_screen_on_lyrics")] ?: false }.distinctUntilChanged()
     }
     var keepScreenOn by remember { mutableStateOf(false) }
     // Sync DataStore → local state
@@ -399,28 +401,6 @@ fun LyricsSheet(
         }
     }
 
-    DisposableEffect(keepScreenOn, lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && keepScreenOn) {
-                keepScreenOn = false
-                coroutineScope.launch {
-                    context.dataStore.edit { prefs ->
-                        prefs[booleanPreferencesKey("keep_screen_on_lyrics")] = false
-                    }
-                }
-            }
-        }
-        
-        if (keepScreenOn) {
-            view.keepScreenOn = true
-        }
-
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            view.keepScreenOn = false
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
 
     val resolvedAutoscrollSpec = autoscrollAnimationSpec ?: if (useAnimatedLyrics) {
         spring(
@@ -1222,18 +1202,30 @@ fun SyncedLyricsList(
     footer: LazyListScope.() -> Unit = {}
 ) {
     val density = LocalDensity.current
-    val playbackPosition by playbackPositionFlow.collectAsStateWithLifecycle()
-    val position = remember(playbackPosition, lyricsSyncOffset, positionOverrideMs) {
-        positionOverrideMs ?: (playbackPosition + lyricsSyncOffset).coerceAtLeast(0L)
-    }
     val isPreviewSeeking = positionOverrideMs != null
-    val currentLineIndex by remember(position, lines) {
-        derivedStateOf {
-            resolveCurrentLineIndex(lines = lines, position = position)
+    val currentLineIndex by remember(playbackPositionFlow, lyricsSyncOffset, positionOverrideMs, lines) {
+        if (positionOverrideMs != null) {
+            flowOf(resolveCurrentLineIndex(lines = lines, position = positionOverrideMs))
+        } else {
+            playbackPositionFlow.map { playbackPosition ->
+                val pos = (playbackPosition + lyricsSyncOffset).coerceAtLeast(0L)
+                resolveCurrentLineIndex(lines = lines, position = pos)
+            }.distinctUntilChanged()
+        }
+    }.collectAsStateWithLifecycle(
+        initialValue = resolveCurrentLineIndex(
+            lines = lines,
+            position = positionOverrideMs ?: (playbackPositionFlow.value + lyricsSyncOffset).coerceAtLeast(0L)
+        )
+    )
+    val currentPositionProvider = remember(playbackPositionFlow, lyricsSyncOffset, positionOverrideMs) {
+        {
+            positionOverrideMs ?: (playbackPositionFlow.value + lyricsSyncOffset).coerceAtLeast(0L)
         }
     }
     var hasAlignedInitialLine by remember(lines) { mutableStateOf(false) }
     var lastAutoScrolledLineIndex by remember(lines) { mutableIntStateOf(-1) }
+
 
     BoxWithConstraints(modifier = modifier) {
         val metrics = remember(maxHeight, highlightZoneFraction, highlightOffsetDp) {
@@ -1352,7 +1344,7 @@ fun SyncedLyricsList(
                         LyricLineRow(
                             line = line,
                             nextTime = nextTime,
-                            position = position,
+                            positionProvider = currentPositionProvider,
                             distanceFromCurrent = distanceFromCurrent,
                             useAnimatedLyrics = useAnimatedLyrics,
                             animatedLyricsBlurEnabled = animatedLyricsBlurEnabled,
@@ -1405,7 +1397,8 @@ fun SyncedLyricsList(
 fun LyricLineRow(
     line: SyncedLine,
     nextTime: Int,
-    position: Long,
+    position: Long = 0L,
+    positionProvider: () -> Long = { position },
     distanceFromCurrent: Int = 100,
     useAnimatedLyrics: Boolean = false,
     animatedLyricsBlurEnabled: Boolean = true,
@@ -1429,9 +1422,7 @@ fun LyricLineRow(
     val lineEndTime = remember(line, nextTime) {
         resolveLineEndTimeMs(line, nextTime)
     }
-    val isCurrentLine by remember(position, line.time, lineEndTime) {
-        derivedStateOf { position in line.time.toLong()..<lineEndTime }
-    }
+    val isCurrentLine = distanceFromCurrent == 0
     val unhighlightedColor = LocalContentColor.current.copy(alpha = 0.45f)
     val lineColor by animateColorAsState(
         targetValue = if (isCurrentLine) accentColor else unhighlightedColor,
@@ -1597,16 +1588,20 @@ fun LyricLineRow(
             }
         }
     } else {
-        val highlightedWordIndex by remember(position, sanitizedWords, line.time, lineEndTime) {
-            derivedStateOf {
+        val highlightedWordIndex = if (isCurrentLine) {
+            val currentPos = positionProvider()
+            remember(currentPos, sanitizedWords, line.time, lineEndTime) {
                 resolveHighlightedWordIndex(
                     words = requireNotNull(sanitizedWords),
-                    positionMs = position,
+                    positionMs = currentPos,
                     lineStartTimeMs = line.time.toLong(),
                     lineEndTimeMs = lineEndTime
                 )
             }
+        } else {
+            -1
         }
+
 
         Column(
             modifier = animatedModifier

@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.components
 
+import android.os.Build
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
@@ -17,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,15 +29,17 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.blur
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
 import com.theveloper.pixelplay.presentation.navigation.isMainRootRoute
 import androidx.lifecycle.compose.currentStateAsState
+
 
 
 @OptIn(UnstableApi::class)
@@ -107,8 +111,8 @@ fun ScreenWrapper(
 
     // Declarative Animations
     val targetRadius = if (shouldRunDepthEffects && !isResumed) 32f else 0f
-    val animatedCornerRadius = if (transition != null) {
-        val animatedValue by transition.animateFloat(
+    val animatedCornerRadius: State<Float> = if (transition != null) {
+        transition.animateFloat(
             transitionSpec = { tween(durationMillis = 350, easing = FastOutSlowInEasing) },
             label = "cornerRadius"
         ) { state ->
@@ -118,13 +122,12 @@ fun ScreenWrapper(
                 0f
             }
         }
-        animatedValue
     } else {
         val fallbackCornerRadius = remember { Animatable(targetRadius) }
         LaunchedEffect(targetRadius) {
             fallbackCornerRadius.animateTo(targetRadius, animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing))
         }
-        fallbackCornerRadius.value
+        fallbackCornerRadius.asState()
     }
 
     // Dim: If strictly behind Top -> 0.4f (or 0.75f if blur is disabled). Else -> 0f.
@@ -133,8 +136,8 @@ fun ScreenWrapper(
     } else {
         0f
     }
-    val animatedDimAlpha = if (transition != null) {
-        val animatedValue by transition.animateFloat(
+    val animatedDimAlpha: State<Float> = if (transition != null) {
+        transition.animateFloat(
             transitionSpec = { tween(durationMillis = 350, easing = CubicBezierEasing(0.5f, 0f, 0.8f, 0.2f)) },
             label = "dimAlpha"
         ) { state ->
@@ -144,36 +147,38 @@ fun ScreenWrapper(
                 0f
             }
         }
-        animatedValue
     } else {
         val fallbackDimAlpha = remember { Animatable(targetDim) }
         LaunchedEffect(targetDim) {
             fallbackDimAlpha.animateTo(targetDim, animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing))
         }
-        fallbackDimAlpha.value
+        fallbackDimAlpha.asState()
     }
 
     // Blur: If strictly behind Top -> 24dp. Else -> 0dp. Disabled if disableBlurAllOver is true.
-    val targetBlur = if (shouldRunDepthEffects && shouldDim && !disableBlurAllOver) 24f else 0f
-    val animatedBlurRadius = if (transition != null) {
-        val animatedValue by transition.animateDp(
+    val density = LocalDensity.current
+    val maxBlurPx = with(density) { 24.dp.toPx() }
+    val animatedBlurRadiusPx: State<Float> = if (transition != null) {
+        transition.animateFloat(
             transitionSpec = { tween(durationMillis = 350, easing = CubicBezierEasing(0.5f, 0f, 0.8f, 0.2f)) },
             label = "blurRadius"
         ) { state ->
             if (shouldRunDepthEffects && shouldDim && !disableBlurAllOver && (state == EnterExitState.PostExit || state == EnterExitState.PreEnter)) {
-                24.dp
+                maxBlurPx
             } else {
-                0.dp
+                0f
             }
         }
-        animatedValue
     } else {
-        val fallbackBlurRadius = remember { Animatable(targetBlur) }
-        LaunchedEffect(targetBlur) {
-            fallbackBlurRadius.animateTo(targetBlur, animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing))
+        val fallbackBlurRadius = remember { Animatable(if (shouldRunDepthEffects && shouldDim && !disableBlurAllOver) maxBlurPx else 0f) }
+        LaunchedEffect(shouldRunDepthEffects, shouldDim, disableBlurAllOver, maxBlurPx) {
+            val target = if (shouldRunDepthEffects && shouldDim && !disableBlurAllOver) maxBlurPx else 0f
+            fallbackBlurRadius.animateTo(target, animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing))
         }
-        fallbackBlurRadius.value.dp
+        fallbackBlurRadius.asState()
     }
+
+    val blurEffectCache = remember { ScreenBlurEffectCache() }
 
     Box(
         modifier = modifier
@@ -191,14 +196,22 @@ fun ScreenWrapper(
                 } else {
                     CompositingStrategy.Auto
                 }
-                if (shouldRunDepthEffects && animatedCornerRadius > 0.5f) {
-                    this.shape = RoundedCornerShape(animatedCornerRadius.dp)
+                val cornerRadius = animatedCornerRadius.value
+                if (shouldRunDepthEffects && cornerRadius > 0.5f) {
+                    this.shape = RoundedCornerShape(cornerRadius.dp)
                     this.clip = true
                 } else {
                     this.clip = false
                 }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val blurPx = if (shouldRunDepthEffects) animatedBlurRadiusPx.value else 0f
+                    this.renderEffect = if (blurPx > 0.5f) {
+                        blurEffectCache.get(blurPx)
+                    } else {
+                        null
+                    }
+                }
             }
-            .blur(radius = if (shouldRunDepthEffects) animatedBlurRadius else 0.dp)
             .background(MaterialTheme.colorScheme.background)
     ) {
         content()
@@ -207,8 +220,29 @@ fun ScreenWrapper(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { alpha = animatedDimAlpha }
+                .graphicsLayer { alpha = animatedDimAlpha.value }
                 .background(Color.Black)
         )
     }
 }
+
+private class ScreenBlurEffectCache {
+    private var lastRadiusPx: Float = Float.NaN
+    private var cached: androidx.compose.ui.graphics.RenderEffect? = null
+
+    fun get(radiusPx: Float): androidx.compose.ui.graphics.RenderEffect? {
+        if (radiusPx <= 0f) {
+            lastRadiusPx = 0f
+            cached = null
+            return null
+        }
+        if (radiusPx != lastRadiusPx) {
+            lastRadiusPx = radiusPx
+            cached = android.graphics.RenderEffect
+                .createBlurEffect(radiusPx, radiusPx, android.graphics.Shader.TileMode.CLAMP)
+                .asComposeRenderEffect()
+        }
+        return cached
+    }
+}
+

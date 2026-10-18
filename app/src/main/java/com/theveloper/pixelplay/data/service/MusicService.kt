@@ -1430,7 +1430,8 @@ class MusicService : MediaLibraryService() {
                 val newDisc = mediaItem?.mediaMetadata?.discNumber ?: 1
                 val newAlbum = mediaItem?.mediaMetadata?.albumTitle?.toString()?.trim()
 
-                val discBoundaryCrossed = prevDisc != newDisc || (!prevAlbum.isNullOrBlank() && prevAlbum != newAlbum)
+                val sameAlbum = !prevAlbum.isNullOrBlank() && prevAlbum.equals(newAlbum, ignoreCase = true)
+                val discBoundaryCrossed = sameAlbum && prevDisc != newDisc
                 if (discBoundaryCrossed) {
                     val player = engine.masterPlayer
                     val firstIndex = findFirstMediaItemIndexForDisc(player, prevAlbum, prevDisc)
@@ -1446,6 +1447,9 @@ class MusicService : MediaLibraryService() {
                         }
                         player.pause()
                         lastActiveMediaItem = player.currentMediaItem ?: mediaItem
+                        mediaSession?.let { refreshMediaSessionUi(it) }
+                        widgetUpdateManager.requestFullUpdate(false)
+                        schedulePlaybackSnapshotPersist()
                         return
                     }
                 }
@@ -1506,13 +1510,13 @@ class MusicService : MediaLibraryService() {
     }
 
     private fun findFirstMediaItemIndexForDisc(player: Player, album: String?, discNumber: Int): Int {
+        if (album.isNullOrBlank()) return androidx.media3.common.C.INDEX_UNSET
         val count = player.mediaItemCount
         for (i in 0 until count) {
             val item = player.getMediaItemAt(i)
             val disc = item.mediaMetadata.discNumber ?: 1
             val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
-            val matchesAlbum = album.isNullOrBlank() || itemAlbum.equals(album, ignoreCase = true)
-            if (disc == discNumber && matchesAlbum) {
+            if (disc == discNumber && itemAlbum.equals(album, ignoreCase = true)) {
                 return i
             }
         }

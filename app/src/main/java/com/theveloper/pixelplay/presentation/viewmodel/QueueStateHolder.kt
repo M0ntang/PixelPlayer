@@ -218,8 +218,10 @@ class QueueStateHolder @Inject constructor(
             if (allAlbums.isEmpty()) return@launch
             val randomAlbum = allAlbums.random()
             val albumSongs = musicRepository.getSongsForAlbum(randomAlbum.id).first()
-            if (albumSongs.isNotEmpty()) {
-                callbacks.playShuffled(albumSongs, randomAlbum.title)
+            val hiddenKeys = userPreferencesRepository.hiddenAlbumSongKeysFlow.first()
+            val playableSongs = albumSongs.filterNot { "${randomAlbum.id}_${it.id}" in hiddenKeys }
+            if (playableSongs.isNotEmpty()) {
+                callbacks.playShuffled(playableSongs, randomAlbum.title)
             }
         }
     }
@@ -233,8 +235,10 @@ class QueueStateHolder @Inject constructor(
             if (allSingles.isEmpty()) return@launch
             val randomSingle = allSingles.random()
             val singleSongs = musicRepository.getSongsForAlbum(randomSingle.id).first()
-            if (singleSongs.isNotEmpty()) {
-                callbacks.playShuffled(singleSongs, randomSingle.title)
+            val hiddenKeys = userPreferencesRepository.hiddenAlbumSongKeysFlow.first()
+            val playableSongs = singleSongs.filterNot { "${randomSingle.id}_${it.id}" in hiddenKeys }
+            if (playableSongs.isNotEmpty()) {
+                callbacks.playShuffled(playableSongs, randomSingle.title)
             }
         }
     }

@@ -50,10 +50,11 @@ object AudioMetaUtils {
 
         // Fallback with MediaExtractor
         try {
-            MediaExtractor().apply {
-                setDataSource(filePath)
-                for (i in 0 until trackCount) {
-                    val format: MediaFormat = getTrackFormat(i)
+            val extractor = MediaExtractor()
+            try {
+                extractor.setDataSource(filePath)
+                for (i in 0 until extractor.trackCount) {
+                    val format: MediaFormat = extractor.getTrackFormat(i)
                     val trackMime = format.getString(MediaFormat.KEY_MIME)
                     if (trackMime?.startsWith("audio/") == true) {
                         mimeType = mimeType ?: trackMime
@@ -65,7 +66,8 @@ object AudioMetaUtils {
                         break
                     }
                 }
-                release()
+            } finally {
+                extractor.release()
             }
         } catch (e: Exception) {
             Log.w("AudioMetaUtils", "Extractor failed for $filePath: ${e.message}")

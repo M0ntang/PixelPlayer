@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import com.theveloper.pixelplay.R
@@ -19,6 +20,7 @@ import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 fun BottomToggleRow(
     modifier: Modifier,
     isShuffleEnabled: Boolean,
+    isShuffleTransitionInProgress: Boolean = false,
     repeatMode: Int,
     isFavoriteProvider: () -> Boolean,
     isSingleDiscMode: Boolean = false,
@@ -27,17 +29,17 @@ fun BottomToggleRow(
     onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit,
     onSingleDiscToggle: () -> Unit = {},
-    activeColorMain: Color = MaterialTheme.colorScheme.primary,
-    activeColorSecondary: Color = MaterialTheme.colorScheme.secondary,
-    activeColorTertiary: Color = MaterialTheme.colorScheme.tertiary,
-    activeColorQuaternary: Color = MaterialTheme.colorScheme.primaryContainer,
-    onActiveColorMain: Color = MaterialTheme.colorScheme.onPrimary,
-    onActiveColorSecondary: Color = MaterialTheme.colorScheme.onSecondary,
-    onActiveColorTertiary: Color = MaterialTheme.colorScheme.onTertiary,
-    onActiveColorQuaternary: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-    inactiveColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    inactiveContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer
+    activeColorMain: Color = LocalMaterialTheme.current.primaryFixed,
+    activeColorSecondary: Color = LocalMaterialTheme.current.secondaryFixed,
+    activeColorTertiary: Color = LocalMaterialTheme.current.tertiaryFixed,
+    activeColorQuaternary: Color = LocalMaterialTheme.current.primaryContainer,
+    onActiveColorMain: Color = LocalMaterialTheme.current.onPrimaryFixed,
+    onActiveColorSecondary: Color = LocalMaterialTheme.current.onSecondaryFixed,
+    onActiveColorTertiary: Color = LocalMaterialTheme.current.onTertiaryFixed,
+    onActiveColorQuaternary: Color = LocalMaterialTheme.current.onPrimaryContainer,
+    inactiveColor: Color = LocalMaterialTheme.current.onSurface.copy(alpha = 0.07f),
+    inactiveContentColor: Color = LocalMaterialTheme.current.onSurface,
+    containerColor: Color = LocalMaterialTheme.current.surfaceContainerLowest.copy(alpha = 0.7f)
 ) {
     val isFavorite = isFavoriteProvider()
     val rowCorners = 60.dp
@@ -60,7 +62,7 @@ fun BottomToggleRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(6.dp)
                 .clip(
                     AbsoluteSmoothCornerShape(
                         cornerRadiusBL = rowCorners,
@@ -74,7 +76,7 @@ fun BottomToggleRow(
                     )
                 )
                 .background(Color.Transparent),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val commonModifier = Modifier.weight(1f)
@@ -82,6 +84,7 @@ fun BottomToggleRow(
             ToggleSegmentButton(
                 modifier = commonModifier,
                 active = isShuffleEnabled,
+                enabled = !isShuffleTransitionInProgress,
                 activeColor = activeColorMain,
                 activeCornerRadius = rowCorners,
                 activeContentColor = onActiveColorMain,
@@ -89,7 +92,7 @@ fun BottomToggleRow(
                 inactiveContentColor = inactiveContentColor,
                 onClick = onShuffleToggle,
                 iconId = R.drawable.rounded_shuffle_24,
-                contentDesc = "Shuffle"
+                contentDesc = stringResource(R.string.common_shuffle)
             )
             val repeatActive = repeatMode != Player.REPEAT_MODE_OFF
             val repeatIcon = when (repeatMode) {
@@ -107,7 +110,7 @@ fun BottomToggleRow(
                 inactiveContentColor = inactiveContentColor,
                 onClick = onRepeatToggle,
                 iconId = repeatIcon,
-                contentDesc = "Repeat"
+                contentDesc = stringResource(R.string.common_repeat)
             )
             ToggleSegmentButton(
                 modifier = commonModifier,
@@ -119,7 +122,7 @@ fun BottomToggleRow(
                 inactiveContentColor = inactiveContentColor,
                 onClick = onFavoriteToggle,
                 iconId = if (isFavorite) R.drawable.round_favorite_24 else R.drawable.rounded_favorite_24,
-                contentDesc = "Favorite"
+                contentDesc = stringResource(R.string.common_favorite)
             )
             if (showSingleDiscButton) {
                 ToggleSegmentButton(
@@ -132,9 +135,10 @@ fun BottomToggleRow(
                     inactiveContentColor = inactiveContentColor,
                     onClick = onSingleDiscToggle,
                     iconId = R.drawable.rounded_disc_one_24,
-                    contentDesc = "Single Disc"
+                    contentDesc = stringResource(R.string.player_single_disc_mode)
                 )
             }
         }
     }
 }
+

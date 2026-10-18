@@ -107,6 +107,7 @@ import androidx.compose.ui.res.stringResource
 import com.theveloper.pixelplay.R
 
 private const val UseSharedCollapsibleTopBarProbe = true
+private val StarFabShape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f)
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -1089,7 +1090,7 @@ private fun SharedArtistTopBarProbe(
 
         LargeExtendedFloatingActionButton(
             onClick = onPlayClick,
-            shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+            shape = StarFabShape,
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             modifier = Modifier
                 .align(shuffleAlignment)
@@ -1486,7 +1487,7 @@ private fun CustomCollapsingTopBar(
                 // Botón de Play
                 LargeExtendedFloatingActionButton(
                     onClick = onPlayClick,
-                    shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
+                    shape = StarFabShape,
                     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
