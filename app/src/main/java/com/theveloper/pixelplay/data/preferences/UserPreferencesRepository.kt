@@ -154,6 +154,8 @@ class UserPreferencesRepository @Inject constructor(
         val DISABLE_CAST_AUTOPLAY = booleanPreferencesKey("disable_cast_autoplay")
         val RESUME_ON_HEADSET_RECONNECT = booleanPreferencesKey("resume_on_headset_reconnect")
         val SHOW_QUEUE_HISTORY = booleanPreferencesKey("show_queue_history")
+        val SHOW_SINGLE_DISC_BUTTON = booleanPreferencesKey("show_single_disc_button")
+        val IS_SINGLE_DISC_MODE = booleanPreferencesKey("is_single_disc_mode")
         val PLAYBACK_QUEUE_SNAPSHOT = stringPreferencesKey("playback_queue_snapshot_v1")
         val FULL_PLAYER_SHOW_FILE_INFO = booleanPreferencesKey("full_player_show_file_info")
         val FULL_PLAYER_DELAY_ALBUM = booleanPreferencesKey("full_player_delay_album")
@@ -249,6 +251,7 @@ class UserPreferencesRepository @Inject constructor(
         val MAX_SINGLE_DURATION_MINUTES = intPreferencesKey("max_single_duration_minutes")
         val EXCLUDE_SINGLES_FROM_ALBUMS = booleanPreferencesKey("exclude_singles_from_albums")
         val HIDDEN_ALBUM_IDS = stringSetPreferencesKey("hidden_album_ids")
+        val HIDDEN_ALBUM_SONG_KEYS = stringSetPreferencesKey("hidden_album_song_keys")
 
         // ReplayGain
         val REPLAYGAIN_ENABLED = booleanPreferencesKey("replaygain_enabled")
@@ -413,6 +416,20 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setShowPlayerFileInfo(show: Boolean) {
         dataStore.edit { it[PreferencesKeys.FULL_PLAYER_SHOW_FILE_INFO] = show }
+    }
+
+    val showSingleDiscButtonFlow: Flow<Boolean> =
+        pref { it[PreferencesKeys.SHOW_SINGLE_DISC_BUTTON] ?: true }
+
+    suspend fun setShowSingleDiscButton(show: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SHOW_SINGLE_DISC_BUTTON] = show }
+    }
+
+    val isSingleDiscModeFlow: Flow<Boolean> =
+        pref { it[PreferencesKeys.IS_SINGLE_DISC_MODE] ?: false }
+
+    suspend fun setSingleDiscMode(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.IS_SINGLE_DISC_MODE] = enabled }
     }
 
     val fullPlayerLoadingTweaksFlow: Flow<FullPlayerLoadingTweaks> =
@@ -790,6 +807,35 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
     suspend fun clearHiddenAlbums() {
         dataStore.edit { preferences ->
             preferences.remove(PreferencesKeys.HIDDEN_ALBUM_IDS)
+        }
+    }
+
+    // ─── Hidden album songs ──────────────────────────────────────────────────
+
+    val hiddenAlbumSongKeysFlow: Flow<Set<String>> =
+        pref { it[PreferencesKeys.HIDDEN_ALBUM_SONG_KEYS] ?: emptySet() }.distinctUntilChanged()
+
+    suspend fun toggleHideSongFromAlbum(albumId: String, songId: String) {
+        val key = "${albumId}_${songId}"
+        dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.HIDDEN_ALBUM_SONG_KEYS] ?: emptySet()
+            preferences[PreferencesKeys.HIDDEN_ALBUM_SONG_KEYS] =
+                if (key in current) current - key else current + key
+        }
+    }
+
+    suspend fun setSongHiddenFromAlbum(albumId: String, songId: String, isHidden: Boolean) {
+        val key = "${albumId}_${songId}"
+        dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.HIDDEN_ALBUM_SONG_KEYS] ?: emptySet()
+            preferences[PreferencesKeys.HIDDEN_ALBUM_SONG_KEYS] =
+                if (isHidden) current + key else current - key
+        }
+    }
+
+    suspend fun clearHiddenAlbumSongs() {
+        dataStore.edit { preferences ->
+            preferences.remove(PreferencesKeys.HIDDEN_ALBUM_SONG_KEYS)
         }
     }
 

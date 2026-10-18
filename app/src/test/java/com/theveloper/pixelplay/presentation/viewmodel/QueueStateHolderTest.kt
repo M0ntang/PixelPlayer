@@ -5,6 +5,7 @@ import com.theveloper.pixelplay.data.model.Album
 import com.theveloper.pixelplay.data.model.Artist
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.model.StorageFilter
+import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.repository.MusicRepository
 import io.mockk.coEvery
 import io.mockk.every
@@ -29,8 +30,9 @@ import org.junit.jupiter.api.extension.ExtendWith
 class QueueStateHolderTest {
 
     private val musicRepository: MusicRepository = mockk(relaxed = true)
+    private val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true)
 
-    private fun holder() = QueueStateHolder(musicRepository)
+    private fun holder() = QueueStateHolder(musicRepository, userPreferencesRepository)
 
     private fun song(id: String, title: String = "Song $id", track: Int = 0, disc: Int? = null) = Song(
         id = id,

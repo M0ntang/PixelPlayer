@@ -661,6 +661,13 @@ fun SettingsCategoryScreen(
                                     onCheckedChange = { settingsViewModel.setShowPlayerFileInfo(it) },
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_attach_file_24), null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.settings_show_single_disc_button_title),
+                                    subtitle = stringResource(R.string.settings_show_single_disc_button_subtitle),
+                                    checked = uiState.showSingleDiscButton,
+                                    onCheckedChange = { settingsViewModel.setShowSingleDiscButton(it) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_disc_one_24), null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
                                 SettingsItem(
                                     title = stringResource(R.string.settings_album_art_palette_title),
                                     subtitle = stringResource(R.string.settings_album_art_palette_subtitle, uiState.albumArtPaletteStyle.label),

@@ -278,6 +278,8 @@ object MediaItemBuilder {
             .setTitle(song.title)
             .setArtist(song.displayArtist)
             .setAlbumTitle(song.album)
+            .setDiscNumber(song.discNumber ?: 1)
+            .setTrackNumber(song.trackNumber)
 
         exposedArtworkUri?.let { artworkUri ->
             metadataBuilder.setArtworkUri(artworkUri)
@@ -286,6 +288,7 @@ object MediaItemBuilder {
         val extras = Bundle().apply {
             putBoolean(EXTERNAL_EXTRA_FLAG, song.id.startsWith(EXTERNAL_MEDIA_ID_PREFIX))
             putString(EXTERNAL_EXTRA_ALBUM, song.album)
+            putLong("albumId", song.albumId)
             putLong(EXTERNAL_EXTRA_DURATION, song.duration)
             putString(EXTERNAL_EXTRA_CONTENT_URI, song.contentUriString)
             (exposedArtworkUri?.toString() ?: song.albumArtUriString)?.let {
@@ -293,6 +296,7 @@ object MediaItemBuilder {
             }
             song.genre?.let { putString(EXTERNAL_EXTRA_GENRE, it) }
             putInt(EXTERNAL_EXTRA_TRACK, song.trackNumber)
+            putInt("discNumber", song.discNumber ?: 1)
             putInt(EXTERNAL_EXTRA_YEAR, song.year)
             putLong(EXTERNAL_EXTRA_DATE_ADDED, song.dateAdded)
             putString(EXTERNAL_EXTRA_MIME_TYPE, song.mimeType)

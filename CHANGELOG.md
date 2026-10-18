@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.6-beta] - 2026-10-18
+
+### Added
+- **Single Disc Playback Mode:** Added toggle in player controls to restrict playback to the currently playing disc of multi-disc releases, with automatic playback pause upon disc completion.
+- **Single Disc Toggle Setting:** Added switch in Settings -> Playback controls to enable or hide the single disc mode button.
+- **Track Hiding in Album View:** Added ability to hide individual tracks from an album view via swipe actions or context menu, with persistence in user preferences.
+- **Track Unhiding & Restoration:** Added context action to restore/unhide previously hidden tracks directly within the album screen.
+- **Disc & Track Metadata Extras:** Enriched media items with `discNumber` and `albumId` metadata for improved disc-boundary tracking across player components.
+
+### Changed
+- **Updated Translations:** Added Russian, Spanish, and English string resources for single-disc mode and track hiding actions.
+
 ## [0.8.5-beta] - 2026-10-15
 
 ### Added

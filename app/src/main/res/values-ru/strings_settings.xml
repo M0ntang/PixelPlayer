@@ -203,6 +203,12 @@
     <string name="settings_player_theme_dynamic">Динамическая система</string>
     <string name="settings_show_player_file_info_title">Показывать информацию о файле</string>
     <string name="settings_show_player_file_info_subtitle">Показывать кодек, битрейт и частоту дискретизации в области прогресса плеера.</string>
+    <string name="settings_show_single_disc_button_title">Кнопка одного диска</string>
+    <string name="settings_show_single_disc_button_subtitle">Отображать кнопку воспроизведения одного диска в панели управления плеера</string>
+    <string name="player_single_disc_mode">Воспроизводить 1 диск</string>
+    <string name="player_single_disc_enabled">Воспроизведение 1 диска включено</string>
+    <string name="player_single_disc_disabled">Воспроизведение всех дисков включено</string>
+    <string name="player_end_of_disc">Достигнут конец диска</string>
     <string name="settings_album_art_palette_title">Стиль палитры обложки</string>
     <string name="settings_album_art_palette_subtitle">Текущий: %1$s. Откройте предпросмотр и выберите стиль.</string>
     <string name="settings_carousel_style_title">Стиль карусели</string>

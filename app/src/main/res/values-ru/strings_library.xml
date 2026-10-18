@@ -541,6 +541,12 @@
     <string name="album_detail_id_not_found">ID альбома не найден</string>
     <string name="album_detail_error_loading_album">Ошибка загрузки данных альбома: %s</string>
     <string name="album_detail_not_found">Альбом не найден</string>
+    <string name="album_hide_from_album">Скрыть из альбома</string>
+    <string name="album_unhide_from_album">Показать в альбоме</string>
+    <string name="album_toast_song_hidden">Песня скрыта из альбома</string>
+    <string name="album_toast_song_unhidden">Песня восстановлена в альбоме</string>
+    <string name="album_toast_song_is_hidden">Этот трек скрыт из альбома</string>
+    <string name="album_toast_all_songs_hidden">Все треки в этом альбоме скрыты</string>
 
     <!-- ArtistDetailViewModel -->
     <string name="artist_detail_invalid_id">Недопустимый ID исполнителя</string>

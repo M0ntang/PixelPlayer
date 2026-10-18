@@ -53,6 +53,8 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -60,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -137,6 +140,8 @@ fun SongInfoBottomSheet(
         coverArtUpdate: CoverArtUpdate?
     ) -> Unit,
     removeFromListTrigger: () -> Unit,
+    isSongHiddenInAlbum: Boolean = false,
+    onToggleHideFromAlbum: (() -> Unit)? = null,
     songInfoViewModel: SongInfoBottomSheetViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -475,7 +480,9 @@ fun SongInfoBottomSheet(
                                                     }
                                                 },
                                                 playButtonShape = playButtonShape,
-                                                evenCornerRadiusElems = evenCornerRadiusElems
+                                                evenCornerRadiusElems = evenCornerRadiusElems,
+                                                isSongHiddenInAlbum = isSongHiddenInAlbum,
+                                                onToggleHideFromAlbum = onToggleHideFromAlbum
                                             )
                                         } else {
                                             Row1Actions(
@@ -496,6 +503,14 @@ fun SongInfoBottomSheet(
                                                 onAddToPlaylist = onAddToPlayList,
                                                 onDelete = deleteSongAction
                                             )
+
+                                            if (onToggleHideFromAlbum != null) {
+                                                HideFromAlbumActionRow(
+                                                    isSongHiddenInAlbum = isSongHiddenInAlbum,
+                                                    onToggleHideFromAlbum = onToggleHideFromAlbum,
+                                                    compact = false
+                                                )
+                                            }
 
                                             if (shouldRenderWatchTransferRow) {
                                                 Row4Actions(
@@ -761,6 +776,79 @@ private fun SongInfoSegmentedListItem(
     }
 }
 
+@Composable
+private fun HideFromAlbumActionRow(
+    isSongHiddenInAlbum: Boolean,
+    onToggleHideFromAlbum: () -> Unit,
+    compact: Boolean = false,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var clickPending by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val containerColor by animateColorAsState(
+        targetValue = if (isSongHiddenInAlbum) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        animationSpec = tween(durationMillis = 250),
+        label = "HideActionContainerColor"
+    )
+
+    val contentColor by animateColorAsState(
+        targetValue = if (isSongHiddenInAlbum) {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
+        animationSpec = tween(durationMillis = 250),
+        label = "HideActionContentColor"
+    )
+
+    FilledTonalButton(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (compact) 58.dp else 66.dp),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        shape = CircleShape,
+        interactionSource = interactionSource,
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        onClick = {
+            if (clickPending) return@FilledTonalButton
+            clickPending = true
+            coroutineScope.launch {
+                kotlinx.coroutines.delay(180)
+                clickPending = false
+                onToggleHideFromAlbum()
+            }
+        }
+    ) {
+        Icon(
+            imageVector = if (isSongHiddenInAlbum) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+            contentDescription = stringResource(
+                if (isSongHiddenInAlbum) R.string.album_unhide_from_album else R.string.album_hide_from_album
+            ),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        TightWrapText(
+            text = stringResource(
+                if (isSongHiddenInAlbum) R.string.album_unhide_from_album else R.string.album_hide_from_album
+            ),
+            fontFamily = GoogleSansRounded,
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CompactSongActions(
@@ -779,7 +867,9 @@ private fun CompactSongActions(
     shouldShowWatchTransferLoading: Boolean,
     onSendToWatchClick: () -> Unit,
     playButtonShape: Shape,
-    evenCornerRadiusElems: androidx.compose.ui.unit.Dp
+    evenCornerRadiusElems: androidx.compose.ui.unit.Dp,
+    isSongHiddenInAlbum: Boolean = false,
+    onToggleHideFromAlbum: (() -> Unit)? = null
 ) {
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     var clickPending by remember { mutableStateOf(false) }
@@ -1084,6 +1174,14 @@ private fun CompactSongActions(
                     contentDescription = stringResource(R.string.song_info_action_delete)
                 )
             }
+        }
+
+        if (onToggleHideFromAlbum != null) {
+            HideFromAlbumActionRow(
+                isSongHiddenInAlbum = isSongHiddenInAlbum,
+                onToggleHideFromAlbum = onToggleHideFromAlbum,
+                compact = true
+            )
         }
     }
 }

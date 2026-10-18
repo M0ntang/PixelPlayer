@@ -21,15 +21,20 @@ fun BottomToggleRow(
     isShuffleEnabled: Boolean,
     repeatMode: Int,
     isFavoriteProvider: () -> Boolean,
+    isSingleDiscMode: Boolean = false,
+    showSingleDiscButton: Boolean = true,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit,
+    onSingleDiscToggle: () -> Unit = {},
     activeColorMain: Color = MaterialTheme.colorScheme.primary,
     activeColorSecondary: Color = MaterialTheme.colorScheme.secondary,
     activeColorTertiary: Color = MaterialTheme.colorScheme.tertiary,
+    activeColorQuaternary: Color = MaterialTheme.colorScheme.primaryContainer,
     onActiveColorMain: Color = MaterialTheme.colorScheme.onPrimary,
     onActiveColorSecondary: Color = MaterialTheme.colorScheme.onSecondary,
     onActiveColorTertiary: Color = MaterialTheme.colorScheme.onTertiary,
+    onActiveColorQuaternary: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
     inactiveContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer
@@ -116,6 +121,20 @@ fun BottomToggleRow(
                 iconId = if (isFavorite) R.drawable.round_favorite_24 else R.drawable.rounded_favorite_24,
                 contentDesc = "Favorite"
             )
+            if (showSingleDiscButton) {
+                ToggleSegmentButton(
+                    modifier = commonModifier,
+                    active = isSingleDiscMode,
+                    activeColor = activeColorQuaternary,
+                    activeCornerRadius = rowCorners,
+                    activeContentColor = onActiveColorQuaternary,
+                    inactiveColor = inactiveColor,
+                    inactiveContentColor = inactiveContentColor,
+                    onClick = onSingleDiscToggle,
+                    iconId = R.drawable.rounded_disc_one_24,
+                    contentDesc = "Single Disc"
+                )
+            }
         }
     }
 }

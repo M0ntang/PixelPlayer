@@ -89,9 +89,12 @@ fun LyricsMoreBottomSheet(
     isShuffleEnabled: Boolean,
     repeatMode: Int,
     isFavoriteProvider: () -> Boolean,
+    isSingleDiscMode: Boolean = false,
+    showSingleDiscButton: Boolean = true,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit,
+    onSingleDiscToggle: () -> Unit = {},
     // Colors
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
@@ -584,9 +587,12 @@ fun LyricsMoreBottomSheet(
                     isShuffleEnabled = isShuffleEnabled,
                     repeatMode = repeatMode,
                     isFavoriteProvider = isFavoriteProvider,
+                    isSingleDiscMode = isSingleDiscMode,
+                    showSingleDiscButton = showSingleDiscButton,
                     onShuffleToggle = onShuffleToggle,
                     onRepeatToggle = onRepeatToggle,
-                    onFavoriteToggle = onFavoriteToggle
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSingleDiscToggle = onSingleDiscToggle
                 )
             }
         }

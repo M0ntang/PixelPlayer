@@ -5,10 +5,21 @@ package com.theveloper.pixelplay.presentation.screens
 import com.theveloper.pixelplay.presentation.navigation.navigateSafely
 import com.theveloper.pixelplay.presentation.navigation.navigateSafelyReplacing
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,8 +45,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.DropdownMenu
@@ -142,12 +156,17 @@ fun AlbumDetailScreen(
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
     val headerActionsLayout by playerViewModel.headerActionsLayout.collectAsStateWithLifecycle()
+    val hiddenAlbumSongKeys by playerViewModel.hiddenAlbumSongKeys.collectAsStateWithLifecycle()
 
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showEditAlbumSheet by remember { mutableStateOf(false) }
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
+    val toastSongHidden = stringResource(R.string.album_toast_song_hidden)
+    val toastSongUnhidden = stringResource(R.string.album_toast_song_unhidden)
+    val toastSongIsHidden = stringResource(R.string.album_toast_song_is_hidden)
+    val toastAllSongsHidden = stringResource(R.string.album_toast_all_songs_hidden)
     var showPlaylistBottomSheet by remember { mutableStateOf(false) }
     val isDarkTheme = LocalPixelPlayDarkTheme.current
     val baseColorScheme = MaterialTheme.colorScheme
@@ -214,6 +233,10 @@ fun AlbumDetailScreen(
                 }
                 val totalDurationText = remember(songs) { formatTotalDuration(songs) }
                 val context = LocalContext.current
+                val currentAlbumId = album.id.toString()
+                val playableSongs = remember(songs, hiddenAlbumSongKeys, currentAlbumId) {
+                    songs.filterNot { "${currentAlbumId}_${it.id}" in hiddenAlbumSongKeys }
+                }
                 val toastAddedToQueue = stringResource(R.string.library_toast_added_to_queue)
                 val lazyListState = rememberLazyListState()
 
@@ -374,7 +397,15 @@ fun AlbumDetailScreen(
                                 key = { song -> "album_song_${song.id}" },
                                 contentType = { "album_song" }
                             ) { song ->
+                                val isHidden = "${currentAlbumId}_${song.id}" in hiddenAlbumSongKeys
+                                val animatedAlpha by animateFloatAsState(
+                                    targetValue = if (isHidden) 0.38f else 1f,
+                                    animationSpec = tween(durationMillis = 250),
+                                    label = "albumSongAlpha_${song.id}"
+                                )
+
                                 SwipeToQueueBox(
+                                    enabled = !isHidden,
                                     swipeStateIdentity = song.id,
                                     coverArtUri = song.albumArtUriString ?: album.albumArtUriString,
                                     themeStateHolder = playerViewModel.themeStateHolder,
@@ -385,15 +416,22 @@ fun AlbumDetailScreen(
                                     }
                                 ) {
                                     EnhancedSongListItem(
+                                        modifier = Modifier.graphicsLayer { alpha = animatedAlpha },
                                         song = song,
-                                        isCurrentSong = stablePlayerState.currentSong?.id == song.id,
-                                        isPlaying = stablePlayerState.isPlaying,
+                                        isCurrentSong = !isHidden && stablePlayerState.currentSong?.id == song.id,
+                                        isPlaying = !isHidden && stablePlayerState.isPlaying,
                                         showAlbumArt = false,
                                         onMoreOptionsClick = {
                                             playerViewModel.selectSongForInfo(song)
                                             showSongInfoBottomSheet = true
                                         },
-                                        onClick = { playerViewModel.showAndPlaySong(song, songs) }
+                                        onClick = {
+                                            if (!isHidden) {
+                                                playerViewModel.showAndPlaySong(song, playableSongs, album.title)
+                                            } else {
+                                                playerViewModel.sendToast(toastSongIsHidden)
+                                            }
+                                        }
                                     )
                                 }
                             }
@@ -412,6 +450,29 @@ fun AlbumDetailScreen(
                         )
                     }
 
+                    val currentSong = stablePlayerState.currentSong
+                    val isCurrentAlbumSong = remember(currentSong?.id, album.id, songs) {
+                        currentSong != null && (
+                            currentSong.albumId == album.id ||
+                            songs.any { it.id == currentSong.id }
+                        )
+                    }
+                    val isPlayingThisAlbum = isCurrentAlbumSong && stablePlayerState.isPlaying
+
+                    val handlePlayClick = {
+                        if (isPlayingThisAlbum) {
+                            playerViewModel.playPause()
+                        } else if (isCurrentAlbumSong) {
+                            playerViewModel.playPause()
+                        } else {
+                            if (playableSongs.isNotEmpty()) {
+                                playerViewModel.showAndPlaySong(playableSongs.first(), playableSongs, album.title)
+                            } else if (songs.isNotEmpty()) {
+                                playerViewModel.sendToast(toastAllSongsHidden)
+                            }
+                        }
+                    }
+
                     if (UseSharedCollapsibleTopBarProbe) {
                         SharedAlbumTopBarProbe(
                             album = album,
@@ -422,17 +483,14 @@ fun AlbumDetailScreen(
                             headerImageRequestSize = headerImageRequestSize,
                             headerCoverStyle = headerCoverStyle,
                             headerActionsLayout = headerActionsLayout,
+                            isPlaying = isPlayingThisAlbum,
                             onHeaderArtworkState = { state ->
                                 if (state is AsyncImagePainter.State.Success) {
                                     headerArtworkLoaded = true
                                 }
                             },
                             onBackPressed = { navController.popBackStack() },
-                            onPlayClick = {
-                                if (songs.isNotEmpty()) {
-                                    playerViewModel.showAndPlaySong(songs.first(), songs)
-                                }
-                            },
+                            onPlayClick = handlePlayClick,
                             onEditClick = { showEditAlbumSheet = true }
                         )
                     } else {
@@ -445,17 +503,14 @@ fun AlbumDetailScreen(
                             headerImageRequestSize = headerImageRequestSize,
                             headerCoverStyle = headerCoverStyle,
                             headerActionsLayout = headerActionsLayout,
+                            isPlaying = isPlayingThisAlbum,
                             onHeaderArtworkState = { state ->
                                 if (state is AsyncImagePainter.State.Success) {
                                     headerArtworkLoaded = true
                                 }
                             },
                             onBackPressed = { navController.popBackStack() },
-                            onPlayClick = {
-                                if (songs.isNotEmpty()) {
-                                    playerViewModel.showAndPlaySong(songs.first(), songs)
-                                }
-                            },
+                            onPlayClick = handlePlayClick,
                             onEditClick = { showEditAlbumSheet = true }
                         )
                     }
@@ -469,6 +524,11 @@ fun AlbumDetailScreen(
             }.value ?: false
 
             if (currentSong != null) {
+                val currentAlbumId = uiState.album?.id?.toString() ?: albumId
+                val isSongHiddenInAlbum = remember(currentAlbumId, currentSong.id, hiddenAlbumSongKeys) {
+                    derivedStateOf { "${currentAlbumId}_${currentSong.id}" in hiddenAlbumSongKeys }
+                }.value
+
                 val removeFromListTrigger = remember(uiState.songs) {
                     {
                         viewModel.update(uiState.songs.filterNot { it.id == currentSong.id })
@@ -481,6 +541,16 @@ fun AlbumDetailScreen(
                         playerViewModel.toggleFavoriteSpecificSong(currentSong)
                     },
                     onDismiss = { showSongInfoBottomSheet = false },
+                    isSongHiddenInAlbum = isSongHiddenInAlbum,
+                    onToggleHideFromAlbum = {
+                        val wasHidden = isSongHiddenInAlbum
+                        playerViewModel.toggleHideSongFromAlbum(currentAlbumId, currentSong.id)
+                        val toastMsg = if (wasHidden) toastSongUnhidden else toastSongHidden
+                        playerViewModel.sendToast(toastMsg)
+                        if (!wasHidden && stablePlayerState.currentSong?.id == currentSong.id) {
+                            playerViewModel.nextSong()
+                        }
+                    },
                     onPlaySong = {
                         playerViewModel.showAndPlaySong(currentSong)
                     },
@@ -581,6 +651,120 @@ fun AlbumDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AlbumPlayPauseFab(
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentAlpha: Float = 1f
+) {
+    if (contentAlpha <= 0.01f) return
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val hapticFeedback = LocalHapticFeedback.current
+
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "albumFabPressScale"
+    )
+
+    val shapeRotation by animateFloatAsState(
+        targetValue = if (isPlaying) 45f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "albumFabShapeRotation"
+    )
+
+    val shapeCurve by animateFloatAsState(
+        targetValue = if (isPlaying) 0.08f else 0.05f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "albumFabShapeCurve"
+    )
+
+    val animatedShape = remember(shapeRotation, shapeCurve) {
+        RoundedStarShape(sides = 8, curve = shapeCurve.toDouble(), rotation = shapeRotation)
+    }
+
+    val containerColor by animateColorAsState(
+        targetValue = if (isPlaying) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.primaryContainer
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "albumFabContainerColor"
+    )
+
+    val contentColor by animateColorAsState(
+        targetValue = if (isPlaying) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "albumFabContentColor"
+    )
+
+    val effectiveScale = contentAlpha * pressScale
+
+    LargeExtendedFloatingActionButton(
+        onClick = {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onClick()
+        },
+        shape = animatedShape,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+        interactionSource = interactionSource,
+        modifier = modifier.graphicsLayer {
+            scaleX = effectiveScale
+            scaleY = effectiveScale
+            alpha = contentAlpha
+        }
+    ) {
+        AnimatedContent(
+            targetState = isPlaying,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(180, delayMillis = 35)) +
+                    scaleIn(
+                        initialScale = 0.5f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )).togetherWith(
+                    fadeOut(animationSpec = tween(90)) +
+                        scaleOut(
+                            targetScale = 0.5f,
+                            animationSpec = tween(90)
+                        )
+                )
+            },
+            label = "albumFabIconCrossfade"
+        ) { playing ->
+            Icon(
+                imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                contentDescription = stringResource(
+                    if (playing) R.string.common_pause else R.string.common_play_album
+                ),
+                modifier = Modifier.size(32.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun SharedAlbumTopBarProbe(
     album: Album,
@@ -591,6 +775,7 @@ private fun SharedAlbumTopBarProbe(
     headerImageRequestSize: Size,
     headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     headerActionsLayout: String = HeaderActionsLayout.SPLIT,
+    isPlaying: Boolean = false,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
@@ -875,26 +1060,15 @@ private fun SharedAlbumTopBarProbe(
             }
         )
 
-        LargeExtendedFloatingActionButton(
+        AlbumPlayPauseFab(
+            isPlaying = isPlaying,
             onClick = onPlayClick,
-            shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
-            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            contentAlpha = expandedContentAlpha,
             modifier = Modifier
                 .align(shuffleAlignment)
                 .statusBarsPadding()
                 .padding(end = 16.dp)
-                .graphicsLayer {
-                    scaleX = expandedContentAlpha
-                    scaleY = expandedContentAlpha
-                    alpha = expandedContentAlpha
-                }
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.PlayArrow,
-                contentDescription = stringResource(R.string.common_play_album),
-                modifier = Modifier.size(32.dp)
-            )
-        }
+        )
     }
 }
 
@@ -909,6 +1083,7 @@ private fun CollapsingAlbumTopBar(
     headerImageRequestSize: Size,
     headerCoverStyle: String = HeaderCoverStyle.GRADIENT_BANNER,
     headerActionsLayout: String = HeaderActionsLayout.SPLIT,
+    isPlaying: Boolean = false,
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
@@ -1236,25 +1411,14 @@ private fun CollapsingAlbumTopBar(
                     }
                 }
 
-                LargeExtendedFloatingActionButton(
+                AlbumPlayPauseFab(
+                    isPlaying = isPlaying,
                     onClick = onPlayClick,
-                    shape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f),
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                    contentAlpha = fabScale,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                            alpha = fabScale
-                        }
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = stringResource(R.string.common_play_album),
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+                )
             }
         }
     }

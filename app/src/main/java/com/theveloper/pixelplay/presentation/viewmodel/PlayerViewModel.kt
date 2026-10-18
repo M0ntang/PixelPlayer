@@ -578,6 +578,29 @@ class PlayerViewModel @Inject constructor(
             initialValue = true
         )
 
+    val showSingleDiscButton: StateFlow<Boolean> = userPreferencesRepository.showSingleDiscButtonFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val isSingleDiscMode: StateFlow<Boolean> = playbackStateHolder.stablePlayerState
+        .map { it.isSingleDiscMode }
+        .distinctUntilChanged()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    fun toggleSingleDiscMode() {
+        viewModelScope.launch {
+            val current = playbackStateHolder.stablePlayerState.value.isSingleDiscMode
+            userPreferencesRepository.setSingleDiscMode(!current)
+        }
+    }
+
     /**
      * Whether tapping the background of the player sheet toggles its state.
      * When disabled, users must use gestures or buttons to expand/collapse.
@@ -1269,6 +1292,8 @@ class PlayerViewModel @Inject constructor(
         val albumArtQuality: AlbumArtQuality = AlbumArtQuality.MEDIUM,
         val audioMetadata: PlaybackAudioMetadata = PlaybackAudioMetadata(),
         val showPlayerFileInfo: Boolean = true,
+        val showSingleDiscButton: Boolean = true,
+        val isSingleDiscMode: Boolean = false,
         val immersiveLyricsEnabled: Boolean = false,
         val immersiveLyricsTimeout: Long = 4000L,
         val isImmersiveTemporarilyDisabled: Boolean = false,
@@ -1278,16 +1303,38 @@ class PlayerViewModel @Inject constructor(
         val bluetoothName: String? = null
     )
 
+    private data class PlayerFileInfoAndDiscSlice(
+        val showFileInfo: Boolean,
+        val showSingleDisc: Boolean,
+        val singleDiscMode: Boolean
+    )
+
+    private val playerFileInfoAndDiscSlice = combine(
+        showPlayerFileInfo,
+        showSingleDiscButton,
+        isSingleDiscMode
+    ) { showInfo, showDisc, discMode ->
+        PlayerFileInfoAndDiscSlice(showInfo, showDisc, discMode)
+    }
+
     // Intermediate combine #1: 5 settings flows
     private val fullPlayerSlicePart1 = combine(
         currentSongArtists,
         currentSongLyricsSyncOffset,
         albumArtQuality,
         playbackAudioMetadata,
-        showPlayerFileInfo
+        playerFileInfoAndDiscSlice
     ) { artists: List<Artist>, syncOffset: Int, artQuality: AlbumArtQuality,
-        audioMeta: PlaybackAudioMetadata, showFileInfo: Boolean ->
-        FullPlayerSlicePart1(artists, syncOffset, artQuality, audioMeta, showFileInfo)
+        audioMeta: PlaybackAudioMetadata, discSlice: PlayerFileInfoAndDiscSlice ->
+        FullPlayerSlicePart1(
+            currentSongArtists = artists,
+            lyricsSyncOffset = syncOffset,
+            albumArtQuality = artQuality,
+            audioMetadata = audioMeta,
+            showPlayerFileInfo = discSlice.showFileInfo,
+            showSingleDiscButton = discSlice.showSingleDisc,
+            isSingleDiscMode = discSlice.singleDiscMode
+        )
     }
 
     private data class BluetoothSlice(val enabled: Boolean, val name: String?)
@@ -1314,7 +1361,9 @@ class PlayerViewModel @Inject constructor(
         val lyricsSyncOffset: Int,
         val albumArtQuality: AlbumArtQuality,
         val audioMetadata: PlaybackAudioMetadata,
-        val showPlayerFileInfo: Boolean
+        val showPlayerFileInfo: Boolean,
+        val showSingleDiscButton: Boolean,
+        val isSingleDiscMode: Boolean
     )
 
     private data class FullPlayerSlicePart2(
@@ -1337,6 +1386,8 @@ class PlayerViewModel @Inject constructor(
             albumArtQuality = p1.albumArtQuality,
             audioMetadata = p1.audioMetadata,
             showPlayerFileInfo = p1.showPlayerFileInfo,
+            showSingleDiscButton = p1.showSingleDiscButton,
+            isSingleDiscMode = p1.isSingleDiscMode,
             immersiveLyricsEnabled = p2.immersiveLyricsEnabled,
             immersiveLyricsTimeout = p2.immersiveLyricsTimeout,
             isImmersiveTemporarilyDisabled = p2.isImmersiveTemporarilyDisabled,
@@ -2429,6 +2480,20 @@ class PlayerViewModel @Inject constructor(
             }
             sendToast(msg)
         }
+    }
+
+    val hiddenAlbumSongKeys: StateFlow<Set<String>> = userPreferencesRepository.hiddenAlbumSongKeysFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    fun toggleHideSongFromAlbum(albumId: String, songId: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.toggleHideSongFromAlbum(albumId, songId)
+        }
+    }
+
+    fun isSongHiddenInAlbum(albumId: String, songId: String): Boolean {
+        val key = "${albumId}_${songId}"
+        return hiddenAlbumSongKeys.value.contains(key)
     }
 
     fun likeSelectedSongs(songs: List<Song>) =

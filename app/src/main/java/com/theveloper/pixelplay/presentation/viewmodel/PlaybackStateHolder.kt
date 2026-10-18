@@ -156,6 +156,11 @@ class PlaybackStateHolder @Inject constructor(
         this.scope = coroutineScope
         this.onCastSeekBlocked = onCastSeekBlocked
         scope?.launch {
+            userPreferencesRepository.isSingleDiscModeFlow.collect { isSingleDisc ->
+                _stablePlayerState.update { it.copy(isSingleDiscMode = isSingleDisc) }
+            }
+        }
+        scope?.launch {
             val snapshot = runCatching {
                 userPreferencesRepository.getPlaybackQueueSnapshotOnce()
             }.getOrNull() ?: return@launch
@@ -492,10 +497,42 @@ class PlaybackStateHolder @Inject constructor(
             castStateHolder.castPlayer?.previous()
         } else {
             val controller = activeLocalPlayer()
-             if (controller.currentPosition > 10000) { // 10 seconds
-                 controller.seekTo(0)
+            if (controller.currentPosition > 10000) { // 10 seconds
+                controller.seekTo(0)
             } else {
-                 controller.seekToPrevious()
+                if (_stablePlayerState.value.isSingleDiscMode) {
+                    val currentIndex = controller.currentMediaItemIndex
+                    if (currentIndex != C.INDEX_UNSET && currentIndex in 0 until controller.mediaItemCount) {
+                        val currentItem = controller.getMediaItemAt(currentIndex)
+                        val currentDisc = currentItem.mediaMetadata.discNumber ?: 1
+                        val currentAlbum = currentItem.mediaMetadata.albumTitle?.toString()?.trim()
+
+                        val prevIndex = controller.previousMediaItemIndex
+                        if (prevIndex != C.INDEX_UNSET) {
+                            val prevItem = controller.getMediaItemAt(prevIndex)
+                            val prevDisc = prevItem.mediaMetadata.discNumber ?: 1
+                            val prevAlbum = prevItem.mediaMetadata.albumTitle?.toString()?.trim()
+
+                            val discChanged = prevDisc != currentDisc || (!currentAlbum.isNullOrBlank() && prevAlbum != currentAlbum)
+                            if (discChanged) {
+                                if (controller.repeatMode == Player.REPEAT_MODE_ALL) {
+                                    val lastIndex = findLastMediaItemIndexForDisc(controller, currentAlbum, currentDisc)
+                                    if (lastIndex != C.INDEX_UNSET) {
+                                        controller.seekTo(lastIndex, 0L)
+                                        return
+                                    }
+                                } else {
+                                    controller.seekTo(0L)
+                                    return
+                                }
+                            }
+                        } else {
+                            controller.seekTo(0L)
+                            return
+                        }
+                    }
+                }
+                controller.seekToPrevious()
             }
         }
     }
@@ -505,8 +542,63 @@ class PlaybackStateHolder @Inject constructor(
         if (castSession != null && castSession.remoteMediaClient != null) {
             castStateHolder.castPlayer?.next()
         } else {
-             activeLocalPlayer().seekToNext()
+            val controller = activeLocalPlayer()
+            if (_stablePlayerState.value.isSingleDiscMode) {
+                val currentIndex = controller.currentMediaItemIndex
+                if (currentIndex != C.INDEX_UNSET && currentIndex in 0 until controller.mediaItemCount) {
+                    val currentItem = controller.getMediaItemAt(currentIndex)
+                    val currentDisc = currentItem.mediaMetadata.discNumber ?: 1
+                    val currentAlbum = currentItem.mediaMetadata.albumTitle?.toString()?.trim()
+
+                    val nextIndex = controller.nextMediaItemIndex
+                    if (nextIndex != C.INDEX_UNSET) {
+                        val nextItem = controller.getMediaItemAt(nextIndex)
+                        val nextDisc = nextItem.mediaMetadata.discNumber ?: 1
+                        val nextAlbum = nextItem.mediaMetadata.albumTitle?.toString()?.trim()
+
+                        val discChanged = nextDisc != currentDisc || (!currentAlbum.isNullOrBlank() && nextAlbum != currentAlbum)
+                        if (discChanged) {
+                            if (controller.repeatMode == Player.REPEAT_MODE_ALL) {
+                                val firstIndex = findFirstMediaItemIndexForDisc(controller, currentAlbum, currentDisc)
+                                if (firstIndex != C.INDEX_UNSET) {
+                                    controller.seekTo(firstIndex, 0L)
+                                    return
+                                }
+                            } else {
+                                controller.seekTo(0L)
+                                controller.pause()
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+            activeLocalPlayer().seekToNext()
         }
+    }
+
+    private fun findFirstMediaItemIndexForDisc(player: Player, album: String?, discNumber: Int): Int {
+        for (i in 0 until player.mediaItemCount) {
+            val item = player.getMediaItemAt(i)
+            val itemDisc = item.mediaMetadata.discNumber ?: 1
+            val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
+            if (itemDisc == discNumber && (album.isNullOrBlank() || itemAlbum == album)) {
+                return i
+            }
+        }
+        return C.INDEX_UNSET
+    }
+
+    private fun findLastMediaItemIndexForDisc(player: Player, album: String?, discNumber: Int): Int {
+        for (i in player.mediaItemCount - 1 downTo 0) {
+            val item = player.getMediaItemAt(i)
+            val itemDisc = item.mediaMetadata.discNumber ?: 1
+            val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
+            if (itemDisc == discNumber && (album.isNullOrBlank() || itemAlbum == album)) {
+                return i
+            }
+        }
+        return C.INDEX_UNSET
     }
 
     fun cycleRepeatMode() {

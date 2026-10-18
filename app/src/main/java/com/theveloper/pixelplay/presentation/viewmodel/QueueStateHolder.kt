@@ -4,6 +4,7 @@ import com.theveloper.pixelplay.data.model.Album
 import com.theveloper.pixelplay.data.model.Artist
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.model.StorageFilter
+import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.repository.MusicRepository
 import com.theveloper.pixelplay.utils.QueueUtils
 import kotlinx.coroutines.CoroutineScope
@@ -52,7 +53,8 @@ class PlaybackSourceCallbacks(
  */
 @Singleton
 class QueueStateHolder @Inject constructor(
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) {
 
     companion object {
@@ -262,8 +264,11 @@ class QueueStateHolder @Inject constructor(
                     musicRepository.getSongsForAlbum(album.id).first()
                 }
 
-                if (songsList.isNotEmpty()) {
-                    val sortedSongs = songsList.sortedWith(
+                val hiddenKeys = userPreferencesRepository.hiddenAlbumSongKeysFlow.first()
+                val playableSongs = songsList.filterNot { "${album.id}_${it.id}" in hiddenKeys }
+
+                if (playableSongs.isNotEmpty()) {
+                    val sortedSongs = playableSongs.sortedWith(
                         compareBy<Song> { it.discNumber ?: 1 }
                             .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
                             .thenBy { it.title.lowercase() }

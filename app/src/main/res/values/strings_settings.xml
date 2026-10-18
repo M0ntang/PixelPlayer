@@ -203,6 +203,12 @@
     <string name="settings_player_theme_dynamic">System Dynamic</string>
     <string name="settings_show_player_file_info_title">Show player file info</string>
     <string name="settings_show_player_file_info_subtitle">Show codec, bitrate, and sample rate in the player progress section.</string>
+    <string name="settings_show_single_disc_button_title">Single disc playback button</string>
+    <string name="settings_show_single_disc_button_subtitle">Show the single disc playback toggle button in player controls.</string>
+    <string name="player_single_disc_mode">Play single disc</string>
+    <string name="player_single_disc_enabled">Single disc playback enabled</string>
+    <string name="player_single_disc_disabled">Consecutive discs playback enabled</string>
+    <string name="player_end_of_disc">End of disc reached</string>
     <string name="settings_album_art_palette_title">Album Art Palette Style</string>
     <string name="settings_album_art_palette_subtitle">Current: %1$s. Open live preview and choose style.</string>
     <string name="settings_carousel_style_title">Carousel Style</string>

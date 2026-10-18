@@ -192,6 +192,12 @@
     <string name="settings_player_theme_dynamic">Dinámico del sistema</string>
     <string name="settings_show_player_file_info_title">Mostrar información del archivo</string>
     <string name="settings_show_player_file_info_subtitle">Mostrar códec, tasa de bits y frecuencia de muestreo en la sección de progreso del reproductor.</string>
+    <string name="settings_show_single_disc_button_title">Botón de un solo disco</string>
+    <string name="settings_show_single_disc_button_subtitle">Mostrar el botón de reproducción de un solo disco en los controles del reproductor.</string>
+    <string name="player_single_disc_mode">Reproducir 1 disco</string>
+    <string name="player_single_disc_enabled">Reproducción de 1 disco activada</string>
+    <string name="player_single_disc_disabled">Reproducción consecutiva de discos activada</string>
+    <string name="player_end_of_disc">Fin del disco alcanzado</string>
     <string name="settings_album_art_palette_title">Estilo de paleta de carátula</string>
     <string name="settings_album_art_palette_subtitle">Actual: %1$s. Abre la vista previa en vivo y elige el estilo.</string>
     <string name="settings_carousel_style_title">Estilo del carrusel</string>

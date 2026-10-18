@@ -541,6 +541,12 @@
     <string name="album_detail_id_not_found">Album ID not found</string>
     <string name="album_detail_error_loading_album">Error loading album data: %s</string>
     <string name="album_detail_not_found">Album not found</string>
+    <string name="album_hide_from_album">Hide from album</string>
+    <string name="album_unhide_from_album">Unhide from album</string>
+    <string name="album_toast_song_hidden">Song hidden from album</string>
+    <string name="album_toast_song_unhidden">Song restored to album</string>
+    <string name="album_toast_song_is_hidden">This track is hidden from the album</string>
+    <string name="album_toast_all_songs_hidden">All tracks in this album are hidden</string>
 
     <!-- ArtistDetailViewModel -->
     <string name="artist_detail_invalid_id">Invalid artist ID</string>

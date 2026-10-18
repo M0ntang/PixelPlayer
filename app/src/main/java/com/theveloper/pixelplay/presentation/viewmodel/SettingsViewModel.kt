@@ -92,6 +92,7 @@ data class SettingsUiState(
     val beta05CleanInstallDisclaimerDismissed: Boolean? = null,
     val fullPlayerLoadingTweaks: FullPlayerLoadingTweaks = FullPlayerLoadingTweaks(),
     val showPlayerFileInfo: Boolean = true,
+    val showSingleDiscButton: Boolean = true,
     // Developer Options
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.MEDIUM,
     val albumArtCacheLimitMb: Int = 200,
@@ -161,6 +162,7 @@ private sealed interface SettingsUiUpdate {
         val headerActionsLayout: String,
         val launchTab: String,
         val showPlayerFileInfo: Boolean,
+        val showSingleDiscButton: Boolean,
         val songMenuIconsOnly: Boolean
     ) : SettingsUiUpdate
     
@@ -620,6 +622,7 @@ class SettingsViewModel @Inject constructor(
                 userPreferencesRepository.headerActionsLayoutFlow,
                 userPreferencesRepository.launchTabFlow,
                 userPreferencesRepository.showPlayerFileInfoFlow,
+                userPreferencesRepository.showSingleDiscButtonFlow,
                 userPreferencesRepository.songMenuIconsOnlyFlow
             ) { values ->
                 SettingsUiUpdate.Group1(
@@ -638,7 +641,8 @@ class SettingsViewModel @Inject constructor(
                     headerActionsLayout = values[12] as String,
                     launchTab = values[13] as String,
                     showPlayerFileInfo = values[14] as Boolean,
-                    songMenuIconsOnly = values[15] as Boolean
+                    showSingleDiscButton = values[15] as Boolean,
+                    songMenuIconsOnly = values[16] as Boolean
                 )
             }.collect { update ->
                 _uiState.update { state ->
@@ -658,6 +662,7 @@ class SettingsViewModel @Inject constructor(
                         headerActionsLayout = update.headerActionsLayout,
                         launchTab = update.launchTab,
                         showPlayerFileInfo = update.showPlayerFileInfo,
+                        showSingleDiscButton = update.showSingleDiscButton,
                         songMenuIconsOnly = update.songMenuIconsOnly
                     )
                 }
@@ -1006,6 +1011,12 @@ class SettingsViewModel @Inject constructor(
     fun setShowPlayerFileInfo(show: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setShowPlayerFileInfo(show)
+        }
+    }
+
+    fun setShowSingleDiscButton(show: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setShowSingleDiscButton(show)
         }
     }
 

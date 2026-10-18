@@ -561,9 +561,12 @@ fun FullPlayerContent(
             shuffleTransitionInProgress = shuffleTransitionInProgress,
             repeatModeProvider = repeatModeProvider,
             isFavoriteProvider = isFavoriteProvider,
+            isSingleDiscMode = fullPlayerSlice.isSingleDiscMode,
+            showSingleDiscButton = fullPlayerSlice.showSingleDiscButton,
             onShuffleToggle = onShuffleToggle,
             onRepeatToggle = onRepeatToggle,
-            onFavoriteToggle = onFavoriteToggle
+            onFavoriteToggle = onFavoriteToggle,
+            onSingleDiscToggle = { playerViewModel.toggleSingleDiscMode() }
         )
     }
 
@@ -977,9 +980,12 @@ fun FullPlayerContent(
             isShuffleEnabled = isShuffleEnabled,
             repeatMode = repeatMode,
             isFavoriteProvider = isFavoriteProvider,
+            isSingleDiscMode = fullPlayerSlice.isSingleDiscMode,
+            showSingleDiscButton = fullPlayerSlice.showSingleDiscButton,
             onShuffleToggle = onShuffleToggle,
             onRepeatToggle = onRepeatToggle,
-            onFavoriteToggle = onFavoriteToggle
+            onFavoriteToggle = onFavoriteToggle,
+            onSingleDiscToggle = { playerViewModel.toggleSingleDiscMode() }
         )
     }
 
@@ -1124,9 +1130,12 @@ private fun FullPlayerControlsSection(
     shuffleTransitionInProgress: Boolean,
     repeatModeProvider: () -> Int,
     isFavoriteProvider: () -> Boolean,
+    isSingleDiscMode: Boolean,
+    showSingleDiscButton: Boolean,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    onSingleDiscToggle: () -> Unit
 ) {
     val motionScheme = remember { MotionScheme.expressive() }
     val controlSpatialSpec = remember { motionScheme.fastSpatialSpec<Float>() }
@@ -1187,9 +1196,12 @@ private fun FullPlayerControlsSection(
                 isShuffleTransitionInProgress = shuffleTransitionInProgress,
                 repeatMode = repeatModeProvider(),
                 isFavoriteProvider = isFavoriteProvider,
+                isSingleDiscMode = isSingleDiscMode,
+                showSingleDiscButton = showSingleDiscButton,
                 onShuffleToggle = onShuffleToggle,
                 onRepeatToggle = onRepeatToggle,
-                onFavoriteToggle = onFavoriteToggle
+                onFavoriteToggle = onFavoriteToggle,
+                onSingleDiscToggle = onSingleDiscToggle
             )
         }
     }
@@ -2548,9 +2560,12 @@ private fun BottomToggleRow(
     isShuffleTransitionInProgress: Boolean,
     repeatMode: Int,
     isFavoriteProvider: () -> Boolean,
+    isSingleDiscMode: Boolean,
+    showSingleDiscButton: Boolean,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    onSingleDiscToggle: () -> Unit
 ) {
     val isFavorite = isFavoriteProvider()
     val rowCorners = 60.dp
@@ -2638,6 +2653,20 @@ private fun BottomToggleRow(
                 iconId = if (isFavorite) R.drawable.round_favorite_24 else R.drawable.rounded_favorite_24,
                 contentDesc = "Favorito"
             )
+            if (showSingleDiscButton) {
+                ToggleSegmentButton(
+                    modifier = commonModifier,
+                    active = isSingleDiscMode,
+                    activeColor = LocalMaterialTheme.current.primaryContainer,
+                    activeCornerRadius = rowCorners,
+                    activeContentColor = LocalMaterialTheme.current.onPrimaryContainer,
+                    inactiveColor = inactiveBg,
+                    inactiveContentColor = inactiveContentColor,
+                    onClick = onSingleDiscToggle,
+                    iconId = R.drawable.rounded_disc_one_24,
+                    contentDesc = stringResource(R.string.player_single_disc_mode)
+                )
+            }
         }
     }
 }

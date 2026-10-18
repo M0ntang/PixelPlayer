@@ -236,6 +236,8 @@ class MusicService : MediaLibraryService() {
     private var resumeOnHeadsetReconnectEnabled = false
     private var pauseOnVolumeZeroEnabled = false
     private var temporaryForegroundStartedInOnCreate = false
+    private var isSingleDiscMode = false
+    private var lastActiveMediaItem: MediaItem? = null
 
     // Observes the device's media stream volume and pauses playback when it
     // reaches 0, if the user has enabled the "pause on volume zero" preference.
@@ -525,6 +527,12 @@ class MusicService : MediaLibraryService() {
         serviceScope.launch {
             userPreferencesRepository.persistentShuffleEnabledFlow.collect { enabled ->
                 persistentShuffleEnabled = enabled
+            }
+        }
+
+        serviceScope.launch {
+            userPreferencesRepository.isSingleDiscModeFlow.collect { enabled ->
+                isSingleDiscMode = enabled
             }
         }
 
@@ -1415,6 +1423,35 @@ class MusicService : MediaLibraryService() {
                     Timber.tag(TAG).d("Cleared end-of-track timer after manual track change")
                 }
             }
+
+            if (isSingleDiscMode && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && lastActiveMediaItem != null) {
+                val prevDisc = lastActiveMediaItem?.mediaMetadata?.discNumber ?: 1
+                val prevAlbum = lastActiveMediaItem?.mediaMetadata?.albumTitle?.toString()?.trim()
+                val newDisc = mediaItem?.mediaMetadata?.discNumber ?: 1
+                val newAlbum = mediaItem?.mediaMetadata?.albumTitle?.toString()?.trim()
+
+                val discBoundaryCrossed = prevDisc != newDisc || (!prevAlbum.isNullOrBlank() && prevAlbum != newAlbum)
+                if (discBoundaryCrossed) {
+                    val player = engine.masterPlayer
+                    val firstIndex = findFirstMediaItemIndexForDisc(player, prevAlbum, prevDisc)
+                    if (player.repeatMode == Player.REPEAT_MODE_ALL) {
+                        if (firstIndex != androidx.media3.common.C.INDEX_UNSET) {
+                            player.seekTo(firstIndex, 0L)
+                            player.play()
+                            return
+                        }
+                    } else {
+                        if (firstIndex != androidx.media3.common.C.INDEX_UNSET) {
+                            player.seekTo(firstIndex, 0L)
+                        }
+                        player.pause()
+                        lastActiveMediaItem = player.currentMediaItem ?: mediaItem
+                        return
+                    }
+                }
+            }
+            lastActiveMediaItem = mediaItem
+
             replayGainProcessor.apply(mediaSession?.player?.currentMediaItem)
             // Pre-fetch RG for the track after this one so it's cached when needed
             val player = engine.masterPlayer
@@ -1466,6 +1503,20 @@ class MusicService : MediaLibraryService() {
                 android.widget.Toast.makeText(this@MusicService, toastMessage, android.widget.Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun findFirstMediaItemIndexForDisc(player: Player, album: String?, discNumber: Int): Int {
+        val count = player.mediaItemCount
+        for (i in 0 until count) {
+            val item = player.getMediaItemAt(i)
+            val disc = item.mediaMetadata.discNumber ?: 1
+            val itemAlbum = item.mediaMetadata.albumTitle?.toString()?.trim()
+            val matchesAlbum = album.isNullOrBlank() || itemAlbum.equals(album, ignoreCase = true)
+            if (disc == discNumber && matchesAlbum) {
+                return i
+            }
+        }
+        return androidx.media3.common.C.INDEX_UNSET
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -2509,6 +2560,7 @@ class MusicService : MediaLibraryService() {
         clearHeadsetReconnectResume()
         cancelDurationSleepTimerInternal()
         endOfTrackTimerSongId = null
+        lastActiveMediaItem = null
 
         if (preservePlaybackSnapshot) {
             persistPlaybackSnapshotOnUnload()

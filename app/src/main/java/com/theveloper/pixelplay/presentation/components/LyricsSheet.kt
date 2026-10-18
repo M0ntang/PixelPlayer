@@ -250,9 +250,12 @@ fun LyricsSheet(
     isShuffleEnabled: Boolean,
     repeatMode: Int,
     isFavoriteProvider: () -> Boolean,
+    isSingleDiscMode: Boolean = false,
+    showSingleDiscButton: Boolean = true,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit,
+    onSingleDiscToggle: () -> Unit = {},
     modifier: Modifier = Modifier,
     swipeThreshold: Dp = 100.dp,
     highlightZoneFraction: Float = 0.08f, // Reduced from 0.22 for less padding
@@ -1074,6 +1077,8 @@ fun LyricsSheet(
                     isShuffleEnabled = isShuffleEnabled,
                     repeatMode = repeatMode,
                     isFavoriteProvider = isFavoriteProvider,
+                    isSingleDiscMode = isSingleDiscMode,
+                    showSingleDiscButton = showSingleDiscButton,
                     onShuffleToggle = {
                         resetImmersiveTimer()
                         onShuffleToggle()
@@ -1085,6 +1090,10 @@ fun LyricsSheet(
                     onFavoriteToggle = {
                         resetImmersiveTimer()
                         onFavoriteToggle()
+                    },
+                    onSingleDiscToggle = {
+                        resetImmersiveTimer()
+                        onSingleDiscToggle()
                     },
                 )
             }
