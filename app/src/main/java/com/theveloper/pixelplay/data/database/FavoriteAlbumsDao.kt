@@ -56,6 +56,9 @@ interface FavoriteAlbumsDao {
     @Query("SELECT album_id FROM favorite_albums")
     fun observeFavoriteAlbumIds(): Flow<List<Long>>
 
+    @Query("SELECT album_id FROM favorite_albums")
+    suspend fun getAllFavoriteAlbumIdsDirect(): List<Long>
+
     @Query("SELECT COUNT(*) > 0 FROM favorite_albums WHERE album_id = :albumId")
     fun isAlbumFavorite(albumId: Long): Flow<Boolean>
 

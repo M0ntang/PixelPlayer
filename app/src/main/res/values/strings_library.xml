@@ -35,8 +35,8 @@
     <string name="favorite_albums_root_folder">Favorites (Root)</string>
     <string name="favorite_albums_remove_from_favorites">Remove from Favorites</string>
     <string name="favorite_albums_add_to_favorites">Add to Favorites</string>
-    <string name="favorite_albums_empty_title">No favorite albums yet</string>
-    <string name="favorite_albums_empty_desc">Add albums to Favorites and organize them into folders and subfolders like Spotify.</string>
+    <string name="favorite_albums_empty_title">No favorites yet</string>
+    <string name="favorite_albums_empty_desc">Mark albums and playlists as favorite to see them here.</string>
     <string name="favorite_albums_folder_subtitle">%1$s folders • %2$s albums</string>
     <string name="favorite_albums_folder_item_desc">Folder • %1$d albums</string>
     <string name="favorite_albums_toast_added">Added to Favorites</string>

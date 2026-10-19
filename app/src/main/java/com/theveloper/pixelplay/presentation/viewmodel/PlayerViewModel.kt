@@ -353,6 +353,24 @@ class PlayerViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val favoritePlaylistIds: StateFlow<Set<String>> = userPreferencesRepository.favoritePlaylistIdsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptySet()
+        )
+
+    val allFavoriteAlbums: StateFlow<List<Album>> = combine(
+        favoriteAlbumsRepository.observeAllFavoriteAlbums(),
+        libraryStateHolder.currentFavoriteAlbumSortOption
+    ) { albums, sortOption ->
+        libraryStateHolder.sortAlbumsList(albums, sortOption)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     private val _playlistPickerStorageFilter = MutableStateFlow(com.theveloper.pixelplay.data.model.StorageFilter.OFFLINE)
     val playlistPickerStorageFilter: StateFlow<com.theveloper.pixelplay.data.model.StorageFilter> = _playlistPickerStorageFilter.asStateFlow()
 
@@ -2755,6 +2773,12 @@ class PlayerViewModel @Inject constructor(
     fun toggleFavoriteAlbum(albumId: Long, folderId: String? = _favoriteAlbumsCurrentFolderId.value) {
         viewModelScope.launch {
             favoriteAlbumsRepository.toggleFavorite(albumId, folderId)
+        }
+    }
+
+    fun toggleFavoritePlaylist(playlistId: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.toggleFavoritePlaylist(playlistId)
         }
     }
 

@@ -32,6 +32,13 @@ class FavoriteAlbumsRepositoryImpl @Inject constructor(
             .flowOn(Dispatchers.IO)
     }
 
+    override fun observeAllFavoriteAlbums(): Flow<List<Album>> {
+        return favoriteAlbumsDao.observeAllFavoriteAlbumsWithDetails()
+            .map { entities -> entities.map { it.toAlbum() } }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.IO)
+    }
+
     override fun isAlbumFavorite(albumId: Long): Flow<Boolean> {
         return favoriteAlbumsDao.isAlbumFavorite(albumId)
             .distinctUntilChanged()
@@ -246,7 +253,7 @@ class FavoriteAlbumsRepositoryImpl @Inject constructor(
 
     override suspend fun getAllSongsInFolder(folderId: String?): List<Song> = withContext(Dispatchers.IO) {
         val albumIds: List<Long> = if (folderId == null) {
-            favoriteAlbumsDao.getAlbumsInRootDirect().map { it.albumId }
+            favoriteAlbumsDao.getAllFavoriteAlbumIdsDirect()
         } else {
             val allFolders = favoriteAlbumsDao.getFoldersByParent(null) // or all
             val allFolderEntities = mutableListOf<FavoriteAlbumFolderEntity>()

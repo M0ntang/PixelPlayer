@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface FavoriteAlbumsRepository {
     fun observeFavoriteAlbumIds(): Flow<Set<Long>>
+    fun observeAllFavoriteAlbums(): Flow<List<Album>>
     fun isAlbumFavorite(albumId: Long): Flow<Boolean>
     suspend fun isAlbumFavoriteOnce(albumId: Long): Boolean
 

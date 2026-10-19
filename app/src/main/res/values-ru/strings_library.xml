@@ -35,8 +35,8 @@
     <string name="favorite_albums_root_folder">Любимое (Корень)</string>
     <string name="favorite_albums_remove_from_favorites">Удалить из любимого</string>
     <string name="favorite_albums_add_to_favorites">Добавить в любимое</string>
-    <string name="favorite_albums_empty_title">Здесь пока нет любимых альбомов</string>
-    <string name="favorite_albums_empty_desc">Добавляйте альбомы в «Любимое» и организуйте их по папкам и подпапкам, как в Spotify.</string>
+    <string name="favorite_albums_empty_title">В «Любимом» пока ничего нет</string>
+    <string name="favorite_albums_empty_desc">Отмечайте альбомы и плейлисты сердечком, чтобы они появились здесь.</string>
     <string name="favorite_albums_folder_subtitle">%1$s папок • %2$s альбомов</string>
     <string name="favorite_albums_folder_item_desc">Папка • %1$d альбомов</string>
     <string name="favorite_albums_toast_added">Альбом добавлен в Любимое</string>

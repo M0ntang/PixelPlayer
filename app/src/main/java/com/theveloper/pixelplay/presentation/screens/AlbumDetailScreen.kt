@@ -142,8 +142,6 @@ import com.theveloper.pixelplay.utils.formatSongCount
 import com.theveloper.pixelplay.utils.shapes.RoundedStarShape
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-import kotlin.math.sin
-import kotlin.math.PI
 import androidx.compose.ui.res.stringResource
 
 private const val UseSharedCollapsibleTopBarProbe = true
@@ -162,6 +160,10 @@ fun AlbumDetailScreen(
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val favoriteAlbumIds by playerViewModel.favoriteAlbumIds.collectAsStateWithLifecycle()
+    val libraryTabs by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
+    val isFavoriteAlbumsTabEnabled = remember(libraryTabs) {
+        "FAVORITE_ALBUMS" in libraryTabs
+    }
     val albumIdLong = remember(albumId) { albumId.toLongOrNull() }
     val isFavoriteAlbum = remember(albumIdLong, favoriteAlbumIds) {
         albumIdLong != null && favoriteAlbumIds.contains(albumIdLong)
@@ -506,6 +508,7 @@ fun AlbumDetailScreen(
                             onPlayClick = handlePlayClick,
                             onEditClick = { showEditAlbumSheet = true },
                             isFavoriteAlbum = isFavoriteAlbum,
+                            isFavoriteAlbumsTabEnabled = isFavoriteAlbumsTabEnabled,
                             onToggleFavorite = {
                                 albumIdLong?.let { playerViewModel.toggleFavoriteAlbum(it) }
                             }
@@ -530,6 +533,7 @@ fun AlbumDetailScreen(
                             onPlayClick = handlePlayClick,
                             onEditClick = { showEditAlbumSheet = true },
                             isFavoriteAlbum = isFavoriteAlbum,
+                            isFavoriteAlbumsTabEnabled = isFavoriteAlbumsTabEnabled,
                             onToggleFavorite = {
                                 albumIdLong?.let { playerViewModel.toggleFavoriteAlbum(it) }
                             }
@@ -787,60 +791,6 @@ private fun AlbumPlayPauseFab(
 }
 
 @Composable
-private fun TactileFavoriteHeartButton(
-    isFavorite: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val haptic = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
-    val bounceScale = remember { Animatable(1f) }
-
-    val containerColor by animateColorAsState(
-        targetValue = if (isFavorite) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
-        animationSpec = tween(durationMillis = 200),
-        label = "heartContainerColor"
-    )
-    val contentColor by animateColorAsState(
-        targetValue = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(durationMillis = 200),
-        label = "heartContentColor"
-    )
-
-    Surface(
-        shape = CircleShape,
-        color = containerColor,
-        contentColor = contentColor,
-        shadowElevation = 3.dp,
-        modifier = modifier
-            .size(42.dp)
-            .graphicsLayer {
-                scaleX = bounceScale.value
-                scaleY = bounceScale.value
-            }
-    ) {
-        IconButton(
-            onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                coroutineScope.launch {
-                    bounceScale.animateTo(0.68f, tween(60, easing = FastOutSlowInEasing))
-                    bounceScale.animateTo(1.38f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
-                    bounceScale.animateTo(1.0f, spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
-                }
-                onClick()
-            },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                contentDescription = if (isFavorite) stringResource(R.string.favorite_albums_remove) else stringResource(R.string.favorite_albums_add),
-                modifier = Modifier.size(22.dp)
-            )
-        }
-    }
-}
-
-@Composable
 private fun SharedAlbumTopBarProbe(
     album: Album,
     songsCount: Int,
@@ -856,6 +806,7 @@ private fun SharedAlbumTopBarProbe(
     onPlayClick: () -> Unit,
     onEditClick: () -> Unit,
     isFavoriteAlbum: Boolean = false,
+    isFavoriteAlbumsTabEnabled: Boolean = true,
     onToggleFavorite: () -> Unit = {}
 ) {
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
@@ -996,9 +947,9 @@ private fun SharedAlbumTopBarProbe(
         }
 
         val (collapsedTitleStartPadding, collapsedTitleEndPadding) = when (headerActionsLayout) {
-            HeaderActionsLayout.ALL_LEFT -> 108.dp to 24.dp
-            HeaderActionsLayout.ALL_RIGHT -> 24.dp to 108.dp
-            else -> 112.dp to 60.dp
+            HeaderActionsLayout.ALL_LEFT -> (if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp) to 24.dp
+            HeaderActionsLayout.ALL_RIGHT -> 24.dp to (if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp)
+            else -> 68.dp to (if (isFavoriteAlbumsTabEnabled) 108.dp else 68.dp)
         }
 
         CollapsibleCommonTopBar(
@@ -1061,10 +1012,19 @@ private fun SharedAlbumTopBarProbe(
                 }
 
                 val favoriteAlbumButton: @Composable () -> Unit = {
-                    TactileFavoriteHeartButton(
-                        isFavorite = isFavoriteAlbum,
-                        onClick = onToggleFavorite
-                    )
+                    FilledIconButton(
+                        onClick = onToggleFavorite,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = if (isFavoriteAlbum) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isFavoriteAlbum) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (isFavoriteAlbum) stringResource(R.string.favorite_albums_remove) else stringResource(R.string.favorite_albums_add),
+                            tint = if (isFavoriteAlbum) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
 
                 when (headerActionsLayout) {
@@ -1079,7 +1039,9 @@ private fun SharedAlbumTopBarProbe(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                             }
                         } else {
@@ -1092,7 +1054,9 @@ private fun SharedAlbumTopBarProbe(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 backButton()
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                             }
                         }
@@ -1108,7 +1072,9 @@ private fun SharedAlbumTopBarProbe(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                             }
                         } else {
@@ -1120,7 +1086,9 @@ private fun SharedAlbumTopBarProbe(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                                 backButton()
                             }
@@ -1135,43 +1103,39 @@ private fun SharedAlbumTopBarProbe(
                         ) {
                             backButton()
                         }
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(end = 12.dp, top = 4.dp)
-                                .zIndex(1f),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            editPencilButton()
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                editPencilButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
+                                editPencilButton()
+                            }
                         }
                     }
                 }
             }
         )
-
-        if (headerActionsLayout == HeaderActionsLayout.SPLIT) {
-            val expandedHeartX = 16.dp
-            val expandedHeartY = if (isSquareMode) 116.dp else 96.dp
-            val collapsedHeartX = 60.dp
-            val collapsedHeartY = 3.dp
-
-            val flightArc = (sin(collapseFraction * PI.toFloat()) * 14f).dp
-            val currentHeartX = lerp(expandedHeartX, collapsedHeartX, collapseFraction) + flightArc
-            val currentHeartY = lerp(expandedHeartY, collapsedHeartY, collapseFraction)
-
-            Box(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .offset(x = currentHeartX, y = currentHeartY)
-                    .zIndex(6f)
-            ) {
-                TactileFavoriteHeartButton(
-                    isFavorite = isFavoriteAlbum,
-                    onClick = onToggleFavorite
-                )
-            }
-        }
 
         AlbumPlayPauseFab(
             isPlaying = isPlaying,
@@ -1202,6 +1166,7 @@ private fun CollapsingAlbumTopBar(
     onPlayClick: () -> Unit,
     onEditClick: () -> Unit,
     isFavoriteAlbum: Boolean = false,
+    isFavoriteAlbumsTabEnabled: Boolean = true,
     onToggleFavorite: () -> Unit = {}
 ) {
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
@@ -1250,18 +1215,18 @@ private fun CollapsingAlbumTopBar(
     val titlePaddingStart = lerp(
         24.dp,
         when (headerActionsLayout) {
-            HeaderActionsLayout.ALL_LEFT -> 108.dp
+            HeaderActionsLayout.ALL_LEFT -> if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp
             HeaderActionsLayout.ALL_RIGHT -> 24.dp
-            else -> 112.dp
+            else -> 68.dp
         },
         collapseFraction
     )
     val titlePaddingEnd = lerp(
         120.dp,
         when (headerActionsLayout) {
-            HeaderActionsLayout.ALL_RIGHT -> 108.dp
+            HeaderActionsLayout.ALL_RIGHT -> if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp
             HeaderActionsLayout.ALL_LEFT -> 24.dp
-            else -> 60.dp
+            else -> if (isFavoriteAlbumsTabEnabled) 108.dp else 68.dp
         },
         collapseFraction
     )
@@ -1407,10 +1372,23 @@ private fun CollapsingAlbumTopBar(
                 }
 
                 val favoriteAlbumButton: @Composable () -> Unit = {
-                    TactileFavoriteHeartButton(
-                        isFavorite = isFavoriteAlbum,
-                        onClick = onToggleFavorite
-                    )
+                    FilledIconButton(
+                        onClick = onToggleFavorite,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = if (isFavoriteAlbum) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isFavoriteAlbum) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (isFavoriteAlbum) {
+                                stringResource(R.string.favorite_albums_remove)
+                            } else {
+                                stringResource(R.string.favorite_albums_add)
+                            },
+                            tint = if (isFavoriteAlbum) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
 
                 when (headerActionsLayout) {
@@ -1425,7 +1403,9 @@ private fun CollapsingAlbumTopBar(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                             }
                         } else {
@@ -1438,7 +1418,9 @@ private fun CollapsingAlbumTopBar(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 backButton()
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                             }
                         }
@@ -1454,7 +1436,9 @@ private fun CollapsingAlbumTopBar(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                             }
                         } else {
@@ -1466,7 +1450,9 @@ private fun CollapsingAlbumTopBar(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                favoriteAlbumButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
                                 editPencilButton()
                                 backButton()
                             }
@@ -1481,15 +1467,34 @@ private fun CollapsingAlbumTopBar(
                         ) {
                             backButton()
                         }
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(end = 12.dp, top = 4.dp)
-                                .zIndex(1f),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            editPencilButton()
+                        if (isExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                editPencilButton()
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 12.dp, top = 4.dp)
+                                    .zIndex(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (isFavoriteAlbumsTabEnabled) {
+                                    favoriteAlbumButton()
+                                }
+                                editPencilButton()
+                            }
                         }
                     }
                 }
@@ -1535,28 +1540,6 @@ private fun CollapsingAlbumTopBar(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                if (headerActionsLayout == HeaderActionsLayout.SPLIT) {
-                    val expandedHeartX = 16.dp
-                    val expandedHeartY = if (isSquareMode) 116.dp else 96.dp
-                    val collapsedHeartX = 60.dp
-                    val collapsedHeartY = 3.dp
-
-                    val flightArc = (sin(collapseFraction * PI.toFloat()) * 14f).dp
-                    val currentHeartX = lerp(expandedHeartX, collapsedHeartX, collapseFraction) + flightArc
-                    val currentHeartY = lerp(expandedHeartY, collapsedHeartY, collapseFraction)
-
-                    Box(
-                        modifier = Modifier
-                            .offset(x = currentHeartX, y = currentHeartY)
-                            .zIndex(6f)
-                    ) {
-                        TactileFavoriteHeartButton(
-                            isFavorite = isFavoriteAlbum,
-                            onClick = onToggleFavorite
                         )
                     }
                 }

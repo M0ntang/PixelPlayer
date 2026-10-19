@@ -100,6 +100,7 @@ class UserPreferencesRepository @Inject constructor(
         val ALBUM_ART_PALETTE_STYLE = stringPreferencesKey("album_art_palette_style_v1")
         val APP_THEME_MODE = stringPreferencesKey("app_theme_mode")
         val FAVORITE_SONG_IDS = stringSetPreferencesKey("favorite_song_ids")
+        val FAVORITE_PLAYLIST_IDS = stringSetPreferencesKey("favorite_playlist_ids")
         val USER_PLAYLISTS = stringPreferencesKey("user_playlists_json_v1")
         val PLAYLIST_SONG_ORDER_MODES = stringPreferencesKey("playlist_song_order_modes")
 
@@ -563,6 +564,24 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun clearFavoriteSongIds() {
         dataStore.edit { it[PreferencesKeys.FAVORITE_SONG_IDS] = emptySet() }
+    }
+
+    val favoritePlaylistIdsFlow: Flow<Set<String>> =
+        pref { it[PreferencesKeys.FAVORITE_PLAYLIST_IDS] ?: emptySet() }
+
+    suspend fun toggleFavoritePlaylist(playlistId: String): Boolean {
+        var isFavorite = false
+        dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.FAVORITE_PLAYLIST_IDS] ?: emptySet()
+            if (playlistId in current) {
+                preferences[PreferencesKeys.FAVORITE_PLAYLIST_IDS] = current - playlistId
+                isFavorite = false
+            } else {
+                preferences[PreferencesKeys.FAVORITE_PLAYLIST_IDS] = current + playlistId
+                isFavorite = true
+            }
+        }
+        return isFavorite
     }
 
     // ─── Playlists ────────────────────────────────────────────────────────────

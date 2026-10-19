@@ -49,8 +49,11 @@ import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DragIndicator
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -188,6 +191,14 @@ fun PlaylistDetailScreen(
     val currentPlaylist = uiState.currentPlaylistDetails
     val isFolderPlaylist = currentPlaylist?.id?.startsWith(FOLDER_PLAYLIST_PREFIX) == true
     val songsInPlaylist = uiState.currentPlaylistSongs
+    val favoritePlaylistIds by playerViewModel.favoritePlaylistIds.collectAsStateWithLifecycle()
+    val isFavoritePlaylist = remember(currentPlaylist?.id, favoritePlaylistIds) {
+        currentPlaylist?.id != null && currentPlaylist.id in favoritePlaylistIds
+    }
+    val libraryTabs by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
+    val isFavoriteAlbumsTabEnabled = remember(libraryTabs) {
+        "FAVORITE_ALBUMS" in libraryTabs
+    }
 
     LaunchedEffect(playlistId) {
         playlistViewModel.loadPlaylistDetails(playlistId)
@@ -313,6 +324,27 @@ fun PlaylistDetailScreen(
                             imageVector = Icons.AutoMirrored.Rounded.Sort,
                             contentDescription = sortSongsLabel
                         )
+                    }
+                    if (!isFolderPlaylist && isFavoriteAlbumsTabEnabled) {
+                        FilledTonalIconButton(
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = if (isFavoritePlaylist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            ),
+                            onClick = {
+                                currentPlaylist?.id?.let { playerViewModel.toggleFavoritePlaylist(it) }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isFavoritePlaylist) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = if (isFavoritePlaylist) {
+                                    stringResource(R.string.favorite_albums_remove)
+                                } else {
+                                    stringResource(R.string.favorite_albums_add)
+                                },
+                                tint = if (isFavoritePlaylist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                     if (!isFolderPlaylist) {
                         FilledTonalIconButton(
@@ -864,6 +896,20 @@ fun PlaylistDetailScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+                if (isFavoriteAlbumsTabEnabled) {
+                    PlaylistActionItem(
+                        icon = rememberVectorPainter(if (isFavoritePlaylist) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder),
+                        label = if (isFavoritePlaylist) {
+                            stringResource(R.string.favorite_albums_remove)
+                        } else {
+                            stringResource(R.string.favorite_albums_add)
+                        },
+                        onClick = {
+                            showPlaylistOptionsSheet = false
+                            currentPlaylist?.id?.let { playerViewModel.toggleFavoritePlaylist(it) }
+                        }
+                    )
                 }
                 PlaylistActionItem(
                     icon = painterResource(R.drawable.rounded_edit_24),

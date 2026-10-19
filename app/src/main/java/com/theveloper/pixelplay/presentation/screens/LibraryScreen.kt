@@ -466,7 +466,6 @@ fun LibraryScreen(
 
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showPlaylistBottomSheet by remember { mutableStateOf(false) }
-    var showCreateFavoriteFolderDialog by remember { mutableStateOf(false) }
     var playlistSheetSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val tabTitles by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
@@ -723,16 +722,8 @@ fun LibraryScreen(
                     !isSortSheetVisible
         }
     }
-    val favoriteAlbumsCurrentFolderId by playerViewModel.favoriteAlbumsCurrentFolderId.collectAsStateWithLifecycle()
-    val canHandleFavoriteAlbumsBack by remember {
-        derivedStateOf {
-            currentTabId == LibraryTabId.FAVORITE_ALBUMS &&
-                    favoriteAlbumsCurrentFolderId != null &&
-                    !isSortSheetVisible
-        }
-    }
 
-    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack || canHandleFavoriteAlbumsBack) {
+    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack) {
         when {
             hasSelectionInCurrentTab -> {
                 when (currentTabId) {
@@ -759,10 +750,6 @@ fun LibraryScreen(
 
                     LibraryTabId.ARTISTS -> Unit
                 }
-            }
-
-            canHandleFavoriteAlbumsBack -> {
-                playerViewModel.navigateBackFavoriteAlbumFolder()
             }
 
             canHandleFolderBack -> {
@@ -1331,9 +1318,7 @@ fun LibraryScreen(
                                             currentTabId == LibraryTabId.LIKED ||
                                             (ENABLE_FOLDERS_STORAGE_FILTER && currentTabId == LibraryTabId.FOLDERS),
                                     currentStorageFilter = playerUiState.currentStorageFilter,
-                                    onStorageFilterClick = { playerViewModel.toggleStorageFilter() },
-                                    showCreateFolderButton = currentTabId == LibraryTabId.FAVORITE_ALBUMS,
-                                    onCreateFolderClick = { showCreateFavoriteFolderDialog = true }
+                                    onStorageFilterClick = { playerViewModel.toggleStorageFilter() }
                                 )
                             }
                         }
@@ -1780,11 +1765,11 @@ fun LibraryScreen(
                                         )
                                     }
                                     LibraryTabId.FAVORITE_ALBUMS -> {
-                                        val favoriteFolders by playerViewModel.favoriteAlbumFoldersInCurrent.collectAsStateWithLifecycle()
-                                        val favoriteAlbums by playerViewModel.favoriteAlbumsInCurrent.collectAsStateWithLifecycle()
-                                        val breadcrumbs by playerViewModel.favoriteAlbumBreadcrumbs.collectAsStateWithLifecycle()
-                                        val currentFolder by playerViewModel.currentFavoriteAlbumFolder.collectAsStateWithLifecycle()
-                                        val allFolders by playerViewModel.allFavoriteAlbumFolders.collectAsStateWithLifecycle()
+                                        val favoriteAlbums by playerViewModel.allFavoriteAlbums.collectAsStateWithLifecycle()
+                                        val favoritePlaylistIds by playerViewModel.favoritePlaylistIds.collectAsStateWithLifecycle()
+                                        val favoritePlaylists = remember(playlistUiState.playlists, favoritePlaylistIds) {
+                                            playlistUiState.playlists.filter { it.id in favoritePlaylistIds }
+                                        }
 
                                         val stableOnAlbumClick: (Long) -> Unit = remember(navController) {
                                             { albumId: Long ->
@@ -1795,16 +1780,20 @@ fun LibraryScreen(
                                             }
                                         }
 
+                                        val stableOnPlaylistClick: (String) -> Unit = remember(navController) {
+                                            { playlistId: String ->
+                                                navController.navigateSafely(Screen.PlaylistDetail.createRoute(playlistId))
+                                            }
+                                        }
+
                                         LibraryFavoriteAlbumsTab(
-                                            folders = favoriteFolders,
                                             albums = favoriteAlbums,
-                                            breadcrumbs = breadcrumbs,
-                                            currentFolder = currentFolder,
-                                            allFolders = allFolders,
+                                            playlists = favoritePlaylists,
                                             isListView = playerUiState.isFavoriteAlbumsListView,
                                             bottomBarHeight = bottomBarHeightDp,
                                             playerViewModel = playerViewModel,
                                             onAlbumClick = stableOnAlbumClick,
+                                            onPlaylistClick = stableOnPlaylistClick,
                                             isRefreshing = isRefreshing,
                                             onRefresh = onRefresh,
                                             isSelectionMode = isAlbumSelectionMode,
@@ -2230,18 +2219,6 @@ fun LibraryScreen(
                 playerViewModel.resetLibraryTabsOrder()
             },
             onDismiss = { showReorderTabsSheet = false }
-        )
-    }
-
-    if (showCreateFavoriteFolderDialog) {
-        val currentFavoriteFolder by playerViewModel.currentFavoriteAlbumFolder.collectAsStateWithLifecycle()
-        CreateFavoriteFolderDialog(
-            isSubfolder = currentFavoriteFolder != null,
-            onDismiss = { showCreateFavoriteFolderDialog = false },
-            onCreate = { name ->
-                playerViewModel.createFavoriteAlbumFolder(name, currentFavoriteFolder?.id)
-                showCreateFavoriteFolderDialog = false
-            }
         )
     }
 

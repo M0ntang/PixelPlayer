@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.8.11-beta] - 2026-10-19
+## [0.8.12-beta] - 2026-10-19
+
+### Removed
+- **Folders in Favorites:** Completely removed folder and subfolder functionality from the Favorites tab in favor of a clean, unified view.
+
+### Added
+- **Favorite Playlists:** Playlists can now be marked as favorites and viewed alongside favorite albums in the "Любимое" tab.
+- **Filter Chips:** Added `[Все]` (`All`), `[Альбомы]` (`Albums`), and `[Плейлисты]` (`Playlists`) filter chips to quickly sort through favorited items.
+- **Playlist Detail Favorite Action:** Added favorite bookmark toggle directly in Playlist Detail top app bar and context menu.
+
+### Changed & Refined
+- **Album Detail Heart Button Placement:** Moved the heart button directly beneath the pencil (edit) button on the right side, seamlessly integrated with the top bar header.
+- **Native Button Styling:** Reverted the heart button back to the standard native `FilledIconButton` / `FilledTonalIconButton`, eliminating floating animations and ensuring immediate tactile responsiveness.
+- **Library Tab Sync:** When the "Любимое" (Favorites) tab is disabled in library configuration settings, the favorite heart button is automatically hidden from album and playlist detail screens.
+
 
 ### Added
 - **Circular "Create Folder" Action:** Added a circular green tonal icon button directly beside the Shuffle button in the library header bar when browsing favorite albums.
