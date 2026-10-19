@@ -9,11 +9,47 @@
     <!-- Library Tab Names -->
     <string name="library_tab_songs">Songs</string>
     <string name="library_tab_albums">Albums</string>
+    <string name="library_tab_favorite_albums">Favorites</string>
     <string name="library_tab_singles">Singles</string>
     <string name="library_tab_artists">Artists</string>
     <string name="library_tab_playlists">Playlists</string>
     <string name="library_tab_folders">Folders</string>
     <string name="library_tab_liked">Liked</string>
+
+    <!-- Favorite Albums (Spotify Style) -->
+    <string name="favorite_albums_tab_title">Favorites</string>
+    <string name="favorite_albums_add">Add to Favorites</string>
+    <string name="favorite_albums_remove">Remove from Favorites</string>
+    <string name="favorite_albums_create_folder">Create folder</string>
+    <string name="favorite_albums_create_subfolder">Create subfolder</string>
+    <string name="favorite_albums_new_folder_title">New folder</string>
+    <string name="favorite_albums_folder_name_hint">Folder name</string>
+    <string name="favorite_albums_rename_folder">Rename folder</string>
+    <string name="favorite_albums_delete_folder">Delete folder</string>
+    <string name="favorite_albums_delete_folder_confirm">Delete folder \"%1$s\"? Albums inside will be kept in the parent folder.</string>
+    <string name="favorite_albums_add_albums">Add albums</string>
+    <string name="favorite_albums_select_albums">Select albums</string>
+    <string name="favorite_albums_move_to_folder">Move to folder</string>
+    <string name="favorite_albums_move_here">Move here</string>
+    <string name="favorite_albums_root_folder">Favorites (Root)</string>
+    <string name="favorite_albums_remove_from_favorites">Remove from Favorites</string>
+    <string name="favorite_albums_add_to_favorites">Add to Favorites</string>
+    <string name="favorite_albums_empty_title">No favorite albums yet</string>
+    <string name="favorite_albums_empty_desc">Add albums to Favorites and organize them into folders and subfolders like Spotify.</string>
+    <string name="favorite_albums_folder_subtitle">%1$s folders • %2$s albums</string>
+    <string name="favorite_albums_folder_item_desc">Folder • %1$d albums</string>
+    <string name="favorite_albums_toast_added">Added to Favorites</string>
+    <string name="favorite_albums_toast_removed">Removed from Favorites</string>
+    <string name="favorite_albums_toast_n_added">Added %1$d albums to Favorites</string>
+    <string name="favorite_albums_toast_moved">Moved to %1$s</string>
+    <string name="favorite_albums_play_folder">Play all</string>
+    <string name="favorite_albums_shuffle_folder">Shuffle all</string>
+    <string name="favorite_albums_empty_folder_title">This folder is empty</string>
+    <string name="favorite_albums_empty_folder_desc">Add albums or create subfolders here.</string>
+    <string name="favorite_albums_search_hint">Search albums…</string>
+    <string name="favorite_albums_add_selected">Add (%1$d)</string>
+    <string name="favorite_albums_count">%1$d albums</string>
+    <string name="favorite_albums_folders_count">%1$d folders</string>
 
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Playlist created successfully</string>

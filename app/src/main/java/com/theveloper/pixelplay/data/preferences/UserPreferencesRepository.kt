@@ -107,6 +107,7 @@ class UserPreferencesRepository @Inject constructor(
         val SONGS_SORT_OPTION = stringPreferencesKey("songs_sort_option")
         val SONGS_SORT_OPTION_MIGRATED = booleanPreferencesKey("songs_sort_option_migrated_v2")
         val ALBUMS_SORT_OPTION = stringPreferencesKey("albums_sort_option")
+        val FAVORITE_ALBUMS_SORT_OPTION = stringPreferencesKey("favorite_albums_sort_option")
         val SINGLES_SORT_OPTION = stringPreferencesKey("singles_sort_option")
         val ARTISTS_SORT_OPTION = stringPreferencesKey("artists_sort_option")
         val PLAYLISTS_SORT_OPTION = stringPreferencesKey("playlists_sort_option")
@@ -235,6 +236,7 @@ class UserPreferencesRepository @Inject constructor(
         // View preferences
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
+        val IS_FAVORITE_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_favorite_albums_list_view")
 
         // Collage
         val COLLAGE_PATTERN = stringPreferencesKey("collage_pattern")
@@ -713,6 +715,17 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
         }
     }
 
+    val isFavoriteAlbumsListViewFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.IS_FAVORITE_ALBUMS_LIST_VIEW] ?: false
+        }
+
+    suspend fun setFavoriteAlbumsListView(isList: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_FAVORITE_ALBUMS_LIST_VIEW] = isList
+        }
+    }
+
     val lastDailyMixUpdateFlow: Flow<Long> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.LAST_DAILY_MIX_UPDATE] ?: 0L
@@ -893,6 +906,9 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
     val albumsSortOptionFlow: Flow<String> =
         pref { SortOption.fromStorageKey(it[PreferencesKeys.ALBUMS_SORT_OPTION], SortOption.ALBUMS, SortOption.AlbumTitleAZ).storageKey }
 
+    val favoriteAlbumsSortOptionFlow: Flow<String> =
+        pref { SortOption.fromStorageKey(it[PreferencesKeys.FAVORITE_ALBUMS_SORT_OPTION], SortOption.ALBUMS, SortOption.AlbumTitleAZ).storageKey }
+
     val singlesSortOptionFlow: Flow<String> =
         pref { SortOption.fromStorageKey(it[PreferencesKeys.SINGLES_SORT_OPTION], SortOption.ALBUMS, SortOption.AlbumTitleAZ).storageKey }
 
@@ -917,6 +933,10 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
 
     suspend fun setAlbumsSortOption(optionKey: String) {
         dataStore.edit { it[PreferencesKeys.ALBUMS_SORT_OPTION] = optionKey }
+    }
+
+    suspend fun setFavoriteAlbumsSortOption(optionKey: String) {
+        dataStore.edit { it[PreferencesKeys.FAVORITE_ALBUMS_SORT_OPTION] = optionKey }
     }
 
     suspend fun setSinglesSortOption(optionKey: String) {
@@ -1046,6 +1066,11 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
             if ("SINGLES" !in order) {
                 val insertAfter = order.indexOf("ALBUMS").takeIf { it != -1 } ?: order.indexOf("SONGS").takeIf { it != -1 } ?: order.lastIndex
                 order.add(insertAfter + 1, "SINGLES")
+                modified = true
+            }
+            if ("FAVORITE_ALBUMS" !in order) {
+                val insertAfter = order.indexOf("ALBUMS").takeIf { it != -1 } ?: order.indexOf("SONGS").takeIf { it != -1 } ?: order.lastIndex
+                order.add(insertAfter + 1, "FAVORITE_ALBUMS")
                 modified = true
             }
             if (modified) {

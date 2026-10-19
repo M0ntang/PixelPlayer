@@ -39,8 +39,10 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.media.CoverArtUpdate
 import com.theveloper.pixelplay.data.model.Album
+import com.theveloper.pixelplay.data.model.FavoriteAlbumFolder
 import com.theveloper.pixelplay.data.model.Artist
 import com.theveloper.pixelplay.data.model.FolderSource
+import com.theveloper.pixelplay.data.repository.FavoriteAlbumsRepository
 import com.theveloper.pixelplay.data.model.Genre
 import com.theveloper.pixelplay.data.model.Lyrics
 import com.theveloper.pixelplay.data.model.LyricsSourcePreference
@@ -101,6 +103,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -179,9 +182,10 @@ private data class SortOptionsSnapshot(
     val artistSort: SortOption,
     val folderSort: SortOption,
     val favoriteSort: SortOption,
+    val favoriteAlbumSort: SortOption,
 )
 
-private val DEFAULT_LIBRARY_TABS = listOf("SONGS", "ALBUMS", "SINGLES", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
+private val DEFAULT_LIBRARY_TABS = listOf("SONGS", "ALBUMS", "SINGLES", "ARTIST", "PLAYLISTS", "FOLDERS", "FAVORITE_ALBUMS", "LIKED")
 
 @UnstableApi
 @SuppressLint("LogNotTimber")
@@ -190,6 +194,7 @@ private val DEFAULT_LIBRARY_TABS = listOf("SONGS", "ALBUMS", "SINGLES", "ARTIST"
 class PlayerViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val musicRepository: MusicRepository,
+    private val favoriteAlbumsRepository: FavoriteAlbumsRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val aiPreferencesRepository: AiPreferencesRepository,
     private val themePreferencesRepository: ThemePreferencesRepository,
@@ -283,6 +288,70 @@ class PlayerViewModel @Inject constructor(
     }
 
 
+
+    val favoriteAlbumIds: StateFlow<Set<Long>> = favoriteAlbumsRepository.observeFavoriteAlbumIds()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptySet()
+        )
+
+    private val _favoriteAlbumsCurrentFolderId = MutableStateFlow<String?>(null)
+    val favoriteAlbumsCurrentFolderId: StateFlow<String?> = _favoriteAlbumsCurrentFolderId.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val currentFavoriteAlbumFolder: StateFlow<FavoriteAlbumFolder?> = _favoriteAlbumsCurrentFolderId
+        .flatMapLatest { folderId ->
+            if (folderId == null) flowOf(null) else favoriteAlbumsRepository.observeFolder(folderId)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val favoriteAlbumBreadcrumbs: StateFlow<List<FavoriteAlbumFolder>> = _favoriteAlbumsCurrentFolderId
+        .flatMapLatest { folderId ->
+            flow { emit(favoriteAlbumsRepository.getBreadcrumbs(folderId)) }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val favoriteAlbumFoldersInCurrent: StateFlow<List<FavoriteAlbumFolder>> = _favoriteAlbumsCurrentFolderId
+        .flatMapLatest { folderId ->
+            favoriteAlbumsRepository.observeFolders(folderId)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val favoriteAlbumsInCurrent: StateFlow<List<Album>> = combine(
+        _favoriteAlbumsCurrentFolderId.flatMapLatest { folderId ->
+            favoriteAlbumsRepository.observeAlbumsInFolder(folderId)
+        },
+        libraryStateHolder.currentFavoriteAlbumSortOption
+    ) { albums, sortOption ->
+        libraryStateHolder.sortAlbumsList(albums, sortOption)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val allFavoriteAlbumFolders: StateFlow<List<FavoriteAlbumFolder>> = favoriteAlbumsRepository.observeAllFolders()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     private val _playlistPickerStorageFilter = MutableStateFlow(com.theveloper.pixelplay.data.model.StorageFilter.OFFLINE)
     val playlistPickerStorageFilter: StateFlow<com.theveloper.pixelplay.data.model.StorageFilter> = _playlistPickerStorageFilter.asStateFlow()
@@ -1153,6 +1222,7 @@ class PlayerViewModel @Inject constructor(
                     LibraryTabId.PLAYLISTS -> SortOption.PLAYLISTS
                     LibraryTabId.FOLDERS -> SortOption.FOLDERS
                     LibraryTabId.LIKED -> SortOption.LIKED
+                    LibraryTabId.FAVORITE_ALBUMS -> SortOption.ALBUMS
                 }
             } finally {
                 Trace.endSection()
@@ -1674,13 +1744,15 @@ class PlayerViewModel @Inject constructor(
             combine(
                 userPreferencesRepository.folderBackGestureNavigationFlow,
                 userPreferencesRepository.isAlbumsListViewFlow,
-            ) { gestureNav, albumsList ->
-                Pair(gestureNav, albumsList)
-            }.collect { (gestureNav, albumsList) ->
+                userPreferencesRepository.isFavoriteAlbumsListViewFlow,
+            ) { gestureNav, albumsList, favoriteAlbumsList ->
+                Triple(gestureNav, albumsList, favoriteAlbumsList)
+            }.collect { (gestureNav, albumsList, favoriteAlbumsList) ->
                 _playerUiState.update {
                     it.copy(
                         folderBackGestureNavigationEnabled = gestureNav,
                         isAlbumsListView = albumsList,
+                        isFavoriteAlbumsListView = favoriteAlbumsList,
                     )
                 }
             }
@@ -1742,6 +1814,11 @@ class PlayerViewModel @Inject constructor(
                 SortOption.LIKED,
                 SortOption.LikedSongDateLiked
             )
+            val initialFavoriteAlbumSort = resolveSortOption(
+                userPreferencesRepository.favoriteAlbumsSortOptionFlow.first(),
+                SortOption.ALBUMS,
+                SortOption.AlbumTitleAZ
+            )
 
             _playerUiState.update {
                 it.copy(
@@ -1750,7 +1827,8 @@ class PlayerViewModel @Inject constructor(
                     currentSingleSortOption = initialSingleSort,
                     currentArtistSortOption = initialArtistSort,
                     currentFolderSortOption = initialFolderSort,
-                    currentFavoriteSortOption = initialLikedSort
+                    currentFavoriteSortOption = initialLikedSort,
+                    currentFavoriteAlbumSortOption = initialFavoriteAlbumSort,
                 )
             }
             // Also update the dedicated flow for favorites to ensure consistency
@@ -1762,6 +1840,7 @@ class PlayerViewModel @Inject constructor(
             sortArtists(initialArtistSort, persist = false)
             sortFolders(initialFolderSort, persist = false)
             sortFavoriteSongs(initialLikedSort, persist = false)
+            sortFavoriteAlbums(initialFavoriteAlbumSort, persist = false)
         }
 
         viewModelScope.launch {
@@ -1940,6 +2019,7 @@ class PlayerViewModel @Inject constructor(
                     libraryStateHolder.currentArtistSortOption,
                     libraryStateHolder.currentFolderSortOption,
                     libraryStateHolder.currentFavoriteSortOption,
+                    libraryStateHolder.currentFavoriteAlbumSortOption,
                 )
             ) { array ->
                 SortOptionsSnapshot(
@@ -1949,6 +2029,7 @@ class PlayerViewModel @Inject constructor(
                     artistSort = array[3],
                     folderSort = array[4],
                     favoriteSort = array[5],
+                    favoriteAlbumSort = array[6],
                 )
             }.collect { snapshot ->
                 _playerUiState.update {
@@ -1959,6 +2040,7 @@ class PlayerViewModel @Inject constructor(
                         currentArtistSortOption = snapshot.artistSort,
                         currentFolderSortOption = snapshot.folderSort,
                         currentFavoriteSortOption = snapshot.favoriteSort,
+                        currentFavoriteAlbumSortOption = snapshot.favoriteAlbumSort,
                     )
                 }
             }
@@ -2638,6 +2720,103 @@ class PlayerViewModel @Inject constructor(
 
     fun sortFolders(sortOption: SortOption, persist: Boolean = true) {
         libraryStateHolder.sortFolders(sortOption, persist)
+    }
+
+    fun sortFavoriteAlbums(sortOption: SortOption, persist: Boolean = true) {
+        libraryStateHolder.sortFavoriteAlbums(sortOption, persist)
+    }
+
+    fun setFavoriteAlbumsListView(isListView: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setFavoriteAlbumsListView(isListView)
+        }
+    }
+
+    fun toggleFavoriteAlbumsView() {
+        viewModelScope.launch {
+            userPreferencesRepository.setFavoriteAlbumsListView(!_playerUiState.value.isFavoriteAlbumsListView)
+        }
+    }
+
+    fun navigateToFavoriteAlbumFolder(folderId: String?) {
+        _favoriteAlbumsCurrentFolderId.value = folderId
+    }
+
+    fun navigateBackFavoriteAlbumFolder(): Boolean {
+        val currentFolder = currentFavoriteAlbumFolder.value
+        return if (currentFolder != null) {
+            _favoriteAlbumsCurrentFolderId.value = currentFolder.parentId
+            true
+        } else {
+            false
+        }
+    }
+
+    fun toggleFavoriteAlbum(albumId: Long, folderId: String? = _favoriteAlbumsCurrentFolderId.value) {
+        viewModelScope.launch {
+            favoriteAlbumsRepository.toggleFavorite(albumId, folderId)
+        }
+    }
+
+    fun addAlbumsToFavorites(albumIds: List<Long>, folderId: String? = _favoriteAlbumsCurrentFolderId.value) {
+        viewModelScope.launch {
+            favoriteAlbumsRepository.addAlbumsToFavorites(albumIds, folderId)
+        }
+    }
+
+    fun removeAlbumFromFavorites(albumId: Long) {
+        viewModelScope.launch {
+            favoriteAlbumsRepository.removeAlbumFromFavorites(albumId)
+        }
+    }
+
+    fun moveAlbumToFolder(albumId: Long, targetFolderId: String?) {
+        viewModelScope.launch {
+            favoriteAlbumsRepository.moveAlbumToFolder(albumId, targetFolderId)
+        }
+    }
+
+    fun createFavoriteAlbumFolder(name: String, parentId: String? = _favoriteAlbumsCurrentFolderId.value) {
+        viewModelScope.launch {
+            favoriteAlbumsRepository.createFolder(name.trim(), parentId)
+        }
+    }
+
+    fun renameFavoriteAlbumFolder(folderId: String, newName: String) {
+        viewModelScope.launch {
+            favoriteAlbumsRepository.renameFolder(folderId, newName.trim())
+        }
+    }
+
+    fun deleteFavoriteAlbumFolder(folderId: String) {
+        viewModelScope.launch {
+            val current = currentFavoriteAlbumFolder.value
+            if (current?.id == folderId) {
+                _favoriteAlbumsCurrentFolderId.value = current.parentId
+            }
+            favoriteAlbumsRepository.deleteFolder(folderId)
+        }
+    }
+
+    fun playFavoriteAlbumFolder(folderId: String?, shuffle: Boolean = false) {
+        viewModelScope.launch {
+            val songs = favoriteAlbumsRepository.getAllSongsInFolder(folderId)
+            if (songs.isNotEmpty()) {
+                val folderName = if (folderId != null) {
+                    currentFavoriteAlbumFolder.value?.takeIf { it.id == folderId }?.name
+                        ?: favoriteAlbumsRepository.getFolder(folderId)?.name
+                        ?: context.getString(R.string.library_tab_favorite_albums)
+                } else {
+                    context.getString(R.string.library_tab_favorite_albums)
+                }
+                if (shuffle) {
+                    playSongsShuffled(songs, folderName, startAtZero = true)
+                } else {
+                    playSongs(songs, songs.first(), folderName)
+                    _isSheetVisible.value = true
+                }
+            }
+        }
     }
 
     fun setFoldersPlaylistView(isPlaylistView: Boolean) {

@@ -20,6 +20,7 @@ import com.theveloper.pixelplay.PixelPlayApplication
 import com.theveloper.pixelplay.data.database.AlbumArtThemeDao
 import com.theveloper.pixelplay.data.database.EngagementDao
 import com.theveloper.pixelplay.data.database.FavoritesDao
+import com.theveloper.pixelplay.data.database.FavoriteAlbumsDao
 import com.theveloper.pixelplay.data.database.GDriveDao
 import com.theveloper.pixelplay.data.database.LyricsDao
 import com.theveloper.pixelplay.data.database.AiCacheDao
@@ -37,6 +38,8 @@ import com.theveloper.pixelplay.data.network.deezer.DeezerApiService
 import com.theveloper.pixelplay.data.network.netease.NeteaseApiService
 import com.theveloper.pixelplay.data.network.lyrics.LrcLibApiService
 import com.theveloper.pixelplay.data.repository.ArtistImageRepository
+import com.theveloper.pixelplay.data.repository.FavoriteAlbumsRepository
+import com.theveloper.pixelplay.data.repository.FavoriteAlbumsRepositoryImpl
 import com.theveloper.pixelplay.data.repository.LyricsRepository
 import com.theveloper.pixelplay.data.repository.LyricsRepositoryImpl
 import com.theveloper.pixelplay.data.repository.MediaStoreSongRepository
@@ -165,7 +168,8 @@ object AppModule {
             PixelPlayDatabase.MIGRATION_38_39,
             PixelPlayDatabase.MIGRATION_39_40,
             PixelPlayDatabase.MIGRATION_40_41,
-            PixelPlayDatabase.MIGRATION_41_42
+            PixelPlayDatabase.MIGRATION_41_42,
+            PixelPlayDatabase.MIGRATION_42_43
         )
             .addCallback(PixelPlayDatabase.createRuntimeArtifactsCallback())
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
@@ -214,6 +218,12 @@ object AppModule {
     @Provides
     fun provideFavoritesDao(database: PixelPlayDatabase): FavoritesDao {
         return database.favoritesDao()
+    }
+
+    @Singleton
+    @Provides
+    fun provideFavoriteAlbumsDao(database: PixelPlayDatabase): FavoriteAlbumsDao {
+        return database.favoriteAlbumsDao()
     }
 
     @Singleton
@@ -408,6 +418,14 @@ object AppModule {
         transitionRepositoryImpl: TransitionRepositoryImpl
     ): TransitionRepository {
         return transitionRepositoryImpl
+    }
+
+    @Singleton
+    @Provides
+    fun provideFavoriteAlbumsRepository(
+        favoriteAlbumsDao: FavoriteAlbumsDao
+    ): FavoriteAlbumsRepository {
+        return FavoriteAlbumsRepositoryImpl(favoriteAlbumsDao)
     }
 
     @Singleton

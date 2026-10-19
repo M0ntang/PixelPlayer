@@ -1,4 +1,4 @@
-package com.theveloper.pixelplay.presentation.viewmodel
+﻿package com.theveloper.pixelplay.presentation.viewmodel
 
 import android.content.Context
 import app.cash.turbine.test
@@ -15,6 +15,7 @@ import com.theveloper.pixelplay.data.model.StorageFilter
 import com.theveloper.pixelplay.data.preferences.ThemePreferencesRepository
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.preferences.AiPreferencesRepository
+import com.theveloper.pixelplay.data.repository.FavoriteAlbumsRepository
 import com.theveloper.pixelplay.data.repository.MusicRepository
 import io.mockk.*
 import androidx.media3.session.MediaController
@@ -40,6 +41,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -63,6 +65,7 @@ class PlayerViewModelTest {
 
     private lateinit var playerViewModel: PlayerViewModel
     private val mockMusicRepository: MusicRepository = mockk()
+    private val mockFavoriteAlbumsRepository: FavoriteAlbumsRepository = mockk(relaxed = true)
     private val mockUserPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true)
     private val mockAiPreferencesRepository: AiPreferencesRepository = mockk(relaxed = true)
     private val mockThemePreferencesRepository: ThemePreferencesRepository = mockk(relaxed = true)
@@ -147,6 +150,10 @@ class PlayerViewModelTest {
         coEvery { mockUserPreferencesRepository.foldersSortOptionFlow } returns flowOf("FolderNameAZ") // Added missing mock
         coEvery { mockUserPreferencesRepository.persistentShuffleEnabledFlow } returns flowOf(false) // Added missing mock
         coEvery { mockUserPreferencesRepository.isShuffleOnFlow } returns flowOf(false) // Added missing mock
+        coEvery { mockUserPreferencesRepository.favoriteAlbumsSortOptionFlow } returns flowOf("AlbumTitleAZ")
+        coEvery { mockUserPreferencesRepository.isFavoriteAlbumsListViewFlow } returns flowOf(false)
+        coEvery { mockUserPreferencesRepository.singlesSortOptionFlow } returns flowOf("AlbumTitleAZ")
+        coEvery { mockUserPreferencesRepository.lastLibraryTabIndexFlow } returns flowOf(0)
         every { mockUserPreferencesRepository.repeatModeFlow } returns _repeatModeFlow
         coEvery { mockThemePreferencesRepository.playerThemePreferenceFlow } returns flowOf("Global")
         coEvery { mockAiPreferencesRepository.aiProvider } returns flowOf("GEMINI")
@@ -166,6 +173,8 @@ class PlayerViewModelTest {
         every { mockLibraryStateHolder.currentArtistSortOption } returns MutableStateFlow<SortOption>(SortOption.ArtistNameAZ)
         every { mockLibraryStateHolder.currentFolderSortOption } returns MutableStateFlow<SortOption>(SortOption.FolderNameAZ)
         every { mockLibraryStateHolder.currentFavoriteSortOption } returns MutableStateFlow<SortOption>(SortOption.LikedSongTitleAZ)
+        every { mockLibraryStateHolder.currentSingleSortOption } returns MutableStateFlow<SortOption>(SortOption.AlbumTitleAZ)
+        every { mockLibraryStateHolder.currentFavoriteAlbumSortOption } returns MutableStateFlow<SortOption>(SortOption.AlbumTitleAZ)
         every { mockLibraryStateHolder.currentStorageFilter } returns MutableStateFlow(StorageFilter.ALL)
 
         every { mockSearchStateHolder.searchHistory } returns _searchHistoryFlow
@@ -282,9 +291,17 @@ class PlayerViewModelTest {
             playbackDispatchStateHolder,
             mockContext
         )
+        every { mockFavoriteAlbumsRepository.observeFavoriteAlbumIds() } returns flowOf(emptySet())
+        every { mockFavoriteAlbumsRepository.observeFolder(any()) } returns flowOf(null)
+        every { mockFavoriteAlbumsRepository.observeFolders(any()) } returns flowOf(emptyList())
+        every { mockFavoriteAlbumsRepository.observeAllFolders() } returns flowOf(emptyList())
+        every { mockFavoriteAlbumsRepository.observeAlbumsInFolder(any()) } returns flowOf(emptyList())
+        coEvery { mockFavoriteAlbumsRepository.getBreadcrumbs(any()) } returns emptyList()
+
         playerViewModel = PlayerViewModel(
             mockContext,
             mockMusicRepository,
+            mockFavoriteAlbumsRepository,
             mockUserPreferencesRepository,
             mockAiPreferencesRepository,
             mockThemePreferencesRepository,
@@ -726,6 +743,68 @@ class PlayerViewModelTest {
                 assertEquals(newFilter, emittedItem.selectedSearchFilter)
                 cancelAndConsumeRemainingEvents()
             }
+        }
+    }
+
+    @Nested
+    inner class FavoriteAlbumsTests {
+        @Test
+        fun `toggleFavoriteAlbum delegates to repository`() = runTest {
+            playerViewModel.toggleFavoriteAlbum(123L)
+            advanceUntilIdle()
+            coVerify(exactly = 1) { mockFavoriteAlbumsRepository.toggleFavorite(123L, any()) }
+        }
+
+        @Test
+        fun `navigateToFavoriteAlbumFolder updates currentFolderId`() = runTest {
+            playerViewModel.navigateToFavoriteAlbumFolder("folder_1")
+            assertEquals("folder_1", playerViewModel.favoriteAlbumsCurrentFolderId.value)
+
+            playerViewModel.navigateToFavoriteAlbumFolder(null)
+            assertNull(playerViewModel.favoriteAlbumsCurrentFolderId.value)
+        }
+
+        @Test
+        fun `createFavoriteAlbumFolder trims name and delegates to repository`() = runTest {
+            playerViewModel.createFavoriteAlbumFolder("  Rock Classics  ")
+            advanceUntilIdle()
+            coVerify(exactly = 1) { mockFavoriteAlbumsRepository.createFolder("Rock Classics", any()) }
+        }
+
+        @Test
+        fun `renameFavoriteAlbumFolder trims name and delegates to repository`() = runTest {
+            playerViewModel.renameFavoriteAlbumFolder("folder_1", "  New Name  ")
+            advanceUntilIdle()
+            coVerify(exactly = 1) { mockFavoriteAlbumsRepository.renameFolder("folder_1", "New Name") }
+        }
+
+        @Test
+        fun `deleteFavoriteAlbumFolder delegates to repository`() = runTest {
+            playerViewModel.deleteFavoriteAlbumFolder("folder_1")
+            advanceUntilIdle()
+            coVerify(exactly = 1) { mockFavoriteAlbumsRepository.deleteFolder("folder_1") }
+        }
+
+        @Test
+        fun `addAlbumsToFavorites delegates to repository`() = runTest {
+            val albumIds = listOf(1L, 2L, 3L)
+            playerViewModel.addAlbumsToFavorites(albumIds)
+            advanceUntilIdle()
+            coVerify(exactly = 1) { mockFavoriteAlbumsRepository.addAlbumsToFavorites(albumIds, any()) }
+        }
+
+        @Test
+        fun `removeAlbumFromFavorites delegates to repository`() = runTest {
+            playerViewModel.removeAlbumFromFavorites(456L)
+            advanceUntilIdle()
+            coVerify(exactly = 1) { mockFavoriteAlbumsRepository.removeAlbumFromFavorites(456L) }
+        }
+
+        @Test
+        fun `moveAlbumToFolder delegates to repository`() = runTest {
+            playerViewModel.moveAlbumToFolder(789L, "folder_target")
+            advanceUntilIdle()
+            coVerify(exactly = 1) { mockFavoriteAlbumsRepository.moveAlbumToFolder(789L, "folder_target") }
         }
     }
 

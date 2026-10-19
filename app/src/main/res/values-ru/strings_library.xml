@@ -9,11 +9,47 @@
     <!-- Library Tab Names -->
     <string name="library_tab_songs">Песни</string>
     <string name="library_tab_albums">Альбомы</string>
+    <string name="library_tab_favorite_albums">Любимое</string>
     <string name="library_tab_singles">Синглы</string>
     <string name="library_tab_artists">Исполнители</string>
     <string name="library_tab_playlists">Плейлисты</string>
     <string name="library_tab_folders">Папки</string>
     <string name="library_tab_liked">Избранное</string>
+
+    <!-- Favorite Albums (Spotify Style) -->
+    <string name="favorite_albums_tab_title">Любимое</string>
+    <string name="favorite_albums_add">Добавить в любимое</string>
+    <string name="favorite_albums_remove">Удалить из любимого</string>
+    <string name="favorite_albums_create_folder">Создать папку</string>
+    <string name="favorite_albums_create_subfolder">Создать подпапку</string>
+    <string name="favorite_albums_new_folder_title">Новая папка</string>
+    <string name="favorite_albums_folder_name_hint">Название папки</string>
+    <string name="favorite_albums_rename_folder">Переименовать папку</string>
+    <string name="favorite_albums_delete_folder">Удалить папку</string>
+    <string name="favorite_albums_delete_folder_confirm">Удалить папку «%1$s»? Альбомы внутри останутся в родительской папке.</string>
+    <string name="favorite_albums_add_albums">Добавить альбомы</string>
+    <string name="favorite_albums_select_albums">Выбрать альбомы</string>
+    <string name="favorite_albums_move_to_folder">Переместить в папку</string>
+    <string name="favorite_albums_move_here">Переместить сюда</string>
+    <string name="favorite_albums_root_folder">Любимое (Корень)</string>
+    <string name="favorite_albums_remove_from_favorites">Удалить из любимого</string>
+    <string name="favorite_albums_add_to_favorites">Добавить в любимое</string>
+    <string name="favorite_albums_empty_title">Здесь пока нет любимых альбомов</string>
+    <string name="favorite_albums_empty_desc">Добавляйте альбомы в «Любимое» и организуйте их по папкам и подпапкам, как в Spotify.</string>
+    <string name="favorite_albums_folder_subtitle">%1$s папок • %2$s альбомов</string>
+    <string name="favorite_albums_folder_item_desc">Папка • %1$d альбомов</string>
+    <string name="favorite_albums_toast_added">Альбом добавлен в Любимое</string>
+    <string name="favorite_albums_toast_removed">Альбом удален из Любимого</string>
+    <string name="favorite_albums_toast_n_added">Добавлено альбомов в Любимое: %1$d</string>
+    <string name="favorite_albums_toast_moved">Перемещено в «%1$s»</string>
+    <string name="favorite_albums_play_folder">Воспроизвести всё</string>
+    <string name="favorite_albums_shuffle_folder">Перемешать всё</string>
+    <string name="favorite_albums_empty_folder_title">Папка пуста</string>
+    <string name="favorite_albums_empty_folder_desc">Добавьте альбомы или создайте подпапки.</string>
+    <string name="favorite_albums_search_hint">Поиск альбомов…</string>
+    <string name="favorite_albums_add_selected">Добавить (%1$d)</string>
+    <string name="favorite_albums_count">%1$d альбомов</string>
+    <string name="favorite_albums_folders_count">%1$d папок</string>
 
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Плейлист успешно создан</string>

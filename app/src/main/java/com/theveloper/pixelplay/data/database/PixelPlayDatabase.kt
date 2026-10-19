@@ -34,9 +34,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         JellyfinSongEntity::class,
         JellyfinPlaylistEntity::class,
         AiCacheEntity::class,
-        AiUsageEntity::class
+        AiUsageEntity::class,
+        FavoriteAlbumEntity::class,
+        FavoriteAlbumFolderEntity::class
     ],
-    version = 42,
+    version = 43,
     exportSchema = true
 )
 abstract class PixelPlayDatabase : RoomDatabase() {
@@ -47,6 +49,7 @@ abstract class PixelPlayDatabase : RoomDatabase() {
     abstract fun telegramDao(): TelegramDao
     abstract fun engagementDao(): EngagementDao
     abstract fun favoritesDao(): FavoritesDao
+    abstract fun favoriteAlbumsDao(): FavoriteAlbumsDao
     abstract fun lyricsDao(): LyricsDao
     abstract fun neteaseDao(): NeteaseDao
     abstract fun gdriveDao(): GDriveDao
@@ -744,6 +747,39 @@ abstract class PixelPlayDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_navidrome_songs_navidrome_id ON navidrome_songs(navidrome_id)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_navidrome_songs_playlist_id ON navidrome_songs(playlist_id)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_navidrome_songs_playlist_id_date_added ON navidrome_songs(playlist_id, date_added)")
+            }
+        }
+
+        val MIGRATION_42_43 = object : Migration(42, 43) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `favorite_albums` (
+                        `album_id` INTEGER NOT NULL,
+                        `folder_id` TEXT,
+                        `added_at` INTEGER NOT NULL,
+                        `sort_order` INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY(`album_id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_favorite_albums_folder_id` ON `favorite_albums` (`folder_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_favorite_albums_added_at` ON `favorite_albums` (`added_at`)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `favorite_album_folders` (
+                        `id` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `parent_id` TEXT,
+                        `created_at` INTEGER NOT NULL,
+                        `updated_at` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_favorite_album_folders_parent_id` ON `favorite_album_folders` (`parent_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_favorite_album_folders_name` ON `favorite_album_folders` (`name`)")
             }
         }
 

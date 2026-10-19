@@ -140,6 +140,12 @@ private fun libraryEmptySpec(
             titleRes = R.string.library_empty_playlists_title,
             subtitleRes = R.string.library_empty_playlists_subtitle
         )
+
+        LibraryTabId.FAVORITE_ALBUMS -> LibraryEmptySpec(
+            iconRes = R.drawable.round_favorite_24,
+            titleRes = R.string.favorite_albums_empty_title,
+            subtitleRes = R.string.favorite_albums_empty_desc
+        )
     }
 }
 

@@ -84,4 +84,11 @@ class LibraryTabIdTest {
         assertEquals(LibraryTabId.Liked, activeTabs.first())
         assertTrue(activeTabs.none { it == LibraryTabId.Songs })
     }
+
+    @Test
+    fun `defaultOrder includes FavoriteAlbums tab`() {
+        assertTrue(LibraryTabId.defaultOrder.contains(LibraryTabId.FavoriteAlbums))
+        assertEquals("FAVORITE_ALBUMS", LibraryTabId.FavoriteAlbums.stableKey)
+        assertEquals(LibraryTabId.FavoriteAlbums, LibraryTabId.fromStableKey("FAVORITE_ALBUMS"))
+    }
 }

@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.8.10-beta] - 2026-10-19
+
+### Added
+- **Favorite Albums Tab (Любимое):** Added a dedicated "Любимое" (Favorites) tab to the Library specifically for albums, allowing users to bookmark and collect their favorite albums in one central place.
+- **Spotify-style Nested Folders:** Organize favorite albums into custom folders and subfolders with 2x2 artwork collages, breadcrumb navigation, and folder playback/shuffle actions.
+- **Album Detail Heart Toggle:** Integrated an animated favorite album heart button directly into the Album Detail screen top bars (both collapsing and shared headers).
+- **Material 3 Expressive Design:** Consistent styling conforming to the app's design language, supporting seamless toggling between Grid and List layouts, folder options bottom sheet, and expressive folder cards.
+- **Room Migration 42->43:** Added `favorite_albums` and `favorite_album_folders` tables with index optimizations and foreign key relationships.
+
+### Fixed
+- **Pre-existing Test Suite Hardening:** Fixed edge cases and assertions in `MusicRepositoryImplTest`, `LoadControlBufferProfileTest`, `LibraryScreenFolderNavigationAnimationTest`, `QueueStateHolderTest`, `LocalArtworkUri`, `BackupSectionTest`, and `LyricsStateHolderTest`. Full test suite achieves 100% pass rate.
 
 ## [0.8.9-beta] - 2026-10-19
 

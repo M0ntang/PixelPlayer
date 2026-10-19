@@ -44,6 +44,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -153,6 +155,11 @@ fun AlbumDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
+    val favoriteAlbumIds by playerViewModel.favoriteAlbumIds.collectAsStateWithLifecycle()
+    val albumIdLong = remember(albumId) { albumId.toLongOrNull() }
+    val isFavoriteAlbum = remember(albumIdLong, favoriteAlbumIds) {
+        albumIdLong != null && favoriteAlbumIds.contains(albumIdLong)
+    }
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
     val headerActionsLayout by playerViewModel.headerActionsLayout.collectAsStateWithLifecycle()
@@ -491,7 +498,11 @@ fun AlbumDetailScreen(
                             },
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = handlePlayClick,
-                            onEditClick = { showEditAlbumSheet = true }
+                            onEditClick = { showEditAlbumSheet = true },
+                            isFavoriteAlbum = isFavoriteAlbum,
+                            onToggleFavorite = {
+                                albumIdLong?.let { playerViewModel.toggleFavoriteAlbum(it) }
+                            }
                         )
                     } else {
                         CollapsingAlbumTopBar(
@@ -511,7 +522,11 @@ fun AlbumDetailScreen(
                             },
                             onBackPressed = { navController.popBackStack() },
                             onPlayClick = handlePlayClick,
-                            onEditClick = { showEditAlbumSheet = true }
+                            onEditClick = { showEditAlbumSheet = true },
+                            isFavoriteAlbum = isFavoriteAlbum,
+                            onToggleFavorite = {
+                                albumIdLong?.let { playerViewModel.toggleFavoriteAlbum(it) }
+                            }
                         )
                     }
                 }
@@ -779,7 +794,9 @@ private fun SharedAlbumTopBarProbe(
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    isFavoriteAlbum: Boolean = false,
+    onToggleFavorite: () -> Unit = {}
 ) {
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -983,6 +1000,21 @@ private fun SharedAlbumTopBarProbe(
                     }
                 }
 
+                val favoriteAlbumButton: @Composable () -> Unit = {
+                    FilledIconButton(
+                        onClick = onToggleFavorite,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (isFavoriteAlbum) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = if (isFavoriteAlbum) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isFavoriteAlbum) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (isFavoriteAlbum) stringResource(R.string.favorite_albums_remove) else stringResource(R.string.favorite_albums_add)
+                        )
+                    }
+                }
+
                 when (headerActionsLayout) {
                     HeaderActionsLayout.ALL_LEFT -> {
                         if (isExpanded) {
@@ -995,6 +1027,7 @@ private fun SharedAlbumTopBarProbe(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
+                                favoriteAlbumButton()
                                 editPencilButton()
                             }
                         } else {
@@ -1007,6 +1040,7 @@ private fun SharedAlbumTopBarProbe(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 backButton()
+                                favoriteAlbumButton()
                                 editPencilButton()
                             }
                         }
@@ -1022,6 +1056,7 @@ private fun SharedAlbumTopBarProbe(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
+                                favoriteAlbumButton()
                                 editPencilButton()
                             }
                         } else {
@@ -1033,6 +1068,7 @@ private fun SharedAlbumTopBarProbe(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                favoriteAlbumButton()
                                 editPencilButton()
                                 backButton()
                             }
@@ -1047,12 +1083,15 @@ private fun SharedAlbumTopBarProbe(
                         ) {
                             backButton()
                         }
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(end = 12.dp, top = 4.dp)
-                                .zIndex(1f)
+                                .zIndex(1f),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            favoriteAlbumButton()
                             editPencilButton()
                         }
                     }
@@ -1087,7 +1126,9 @@ private fun CollapsingAlbumTopBar(
     onHeaderArtworkState: ((AsyncImagePainter.State) -> Unit)? = null,
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    isFavoriteAlbum: Boolean = false,
+    onToggleFavorite: () -> Unit = {}
 ) {
     val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -1291,6 +1332,21 @@ private fun CollapsingAlbumTopBar(
                     }
                 }
 
+                val favoriteAlbumButton: @Composable () -> Unit = {
+                    FilledIconButton(
+                        onClick = onToggleFavorite,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (isFavoriteAlbum) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = if (isFavoriteAlbum) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isFavoriteAlbum) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (isFavoriteAlbum) stringResource(R.string.favorite_albums_remove) else stringResource(R.string.favorite_albums_add)
+                        )
+                    }
+                }
+
                 when (headerActionsLayout) {
                     HeaderActionsLayout.ALL_LEFT -> {
                         if (isExpanded) {
@@ -1303,6 +1359,7 @@ private fun CollapsingAlbumTopBar(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
+                                favoriteAlbumButton()
                                 editPencilButton()
                             }
                         } else {
@@ -1315,6 +1372,7 @@ private fun CollapsingAlbumTopBar(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 backButton()
+                                favoriteAlbumButton()
                                 editPencilButton()
                             }
                         }
@@ -1330,6 +1388,7 @@ private fun CollapsingAlbumTopBar(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 backButton()
+                                favoriteAlbumButton()
                                 editPencilButton()
                             }
                         } else {
@@ -1341,6 +1400,7 @@ private fun CollapsingAlbumTopBar(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                favoriteAlbumButton()
                                 editPencilButton()
                                 backButton()
                             }
@@ -1355,12 +1415,15 @@ private fun CollapsingAlbumTopBar(
                         ) {
                             backButton()
                         }
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(end = 12.dp, top = 4.dp)
-                                .zIndex(1f)
+                                .zIndex(1f),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            favoriteAlbumButton()
                             editPencilButton()
                         }
                     }

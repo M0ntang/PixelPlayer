@@ -1,4 +1,4 @@
-package com.theveloper.pixelplay.presentation.viewmodel
+﻿package com.theveloper.pixelplay.presentation.viewmodel
 
 import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.media.AudioMetadataReader
@@ -19,6 +19,7 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,6 +66,7 @@ class LyricsStateHolder @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val songMetadataEditor: SongMetadataEditor
 ) {
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     private var scope: CoroutineScope? = null
     private var loadingJob: Job? = null
     private var loadCallback: LyricsLoadCallback? = null
@@ -127,7 +129,7 @@ class LyricsStateHolder @Inject constructor(
             loadCallback?.onLoadingStarted(targetSongId)
 
             val fetchedLyrics = try {
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     musicRepository.getLyrics(
                         song = song,
                         sourcePreference = sourcePreference
@@ -196,7 +198,7 @@ class LyricsStateHolder @Inject constructor(
             _searchUiState.value = LyricsSearchUiState.Loading
 
             if (!forcePickResults) {
-                val storedLyrics = withContext(Dispatchers.IO) {
+                val storedLyrics = withContext(ioDispatcher) {
                     musicRepository.getStoredLyrics(song)
                 }
                 if (storedLyrics != null) {
@@ -226,7 +228,7 @@ class LyricsStateHolder @Inject constructor(
 
             // Try local sources in priority order.
             for (sourceCheck in localSourceChecks) {
-                val result = withContext(Dispatchers.IO) { sourceCheck() }
+                val result = withContext(ioDispatcher) { sourceCheck() }
                 if (result != null) {
                     val (rawLyrics, messageResId) = result
                     val parsed = LyricsUtils.parseLyrics(rawLyrics)
@@ -355,7 +357,7 @@ class LyricsStateHolder @Inject constructor(
         scope?.launch {
             _messageEvents.emit(cb.getString(R.string.lyrics_translate_progress))
 
-            val rawLyrics = withContext(Dispatchers.IO) {
+            val rawLyrics = withContext(ioDispatcher) {
                 currentSong.lyrics?.takeIf { it.isNotBlank() }
                     ?: readLocalLyricsFile(currentSong)
                     ?: readEmbeddedLyricsFromFile(currentSong)
@@ -463,7 +465,7 @@ class LyricsStateHolder @Inject constructor(
         val normalizedLyrics = rawLyrics.trim()
         if (normalizedLyrics.isBlank()) return null
 
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             val existingArtwork = runCatching {
                 AudioMetadataReader.read(File(song.path))?.artwork
             }.getOrNull()

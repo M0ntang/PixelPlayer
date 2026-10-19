@@ -51,6 +51,21 @@ enum class LibraryTabId(
             SortOption.AlbumDateAdded
         )
     ),
+    FavoriteAlbums(
+        stableKey = "FAVORITE_ALBUMS",
+        label = "FAVORITE_ALBUMS",
+        labelRes = R.string.library_tab_favorite_albums,
+        iconRes = R.drawable.round_favorite_24,
+        sortOptions = listOf(
+            SortOption.AlbumTitleAZ,
+            SortOption.AlbumTitleZA,
+            SortOption.AlbumArtist,
+            SortOption.AlbumArtistDesc,
+            SortOption.AlbumReleaseYear,
+            SortOption.AlbumReleaseYearAsc,
+            SortOption.AlbumDateAdded
+        )
+    ),
     Singles(
         stableKey = "SINGLES",
         label = "SINGLES",

@@ -1,4 +1,4 @@
-package com.theveloper.pixelplay.utils
+﻿package com.theveloper.pixelplay.utils
 
 import android.net.Uri
 
@@ -45,16 +45,20 @@ object LocalArtworkUri {
         if (uriString.isNullOrBlank()) return null
         if (!looksLikeVolatileArtworkUri(uriString)) return null
 
-        val fileName = uriString.substringAfterLast('/').substringBefore('?')
-        if (!fileName.startsWith("song_art_")) {
-            return null
+        val lastSegment = uriString.substringAfterLast('/').substringBefore('?')
+        if (lastSegment.startsWith("song_art_")) {
+            return lastSegment
+                .removePrefix("song_art_")
+                .substringBefore('_')
+                .substringBefore('.')
+                .toLongOrNull()
         }
 
-        return fileName
-            .removePrefix("song_art_")
-            .substringBefore('_')
-            .substringBefore('.')
-            .toLongOrNull()
+        if (uriString.lowercase().contains(".artwork/song/")) {
+            return lastSegment.toLongOrNull()
+        }
+
+        return null
     }
 
     fun extractCacheBustToken(uriString: String?): String? {

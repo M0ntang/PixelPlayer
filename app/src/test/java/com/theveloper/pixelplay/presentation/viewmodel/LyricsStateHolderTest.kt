@@ -1,4 +1,4 @@
-package com.theveloper.pixelplay.presentation.viewmodel
+﻿package com.theveloper.pixelplay.presentation.viewmodel
 
 import com.google.common.truth.Truth.assertThat
 import com.theveloper.pixelplay.data.media.SongMetadataEditor
@@ -55,7 +55,9 @@ class LyricsStateHolderTest {
             userPreferencesRepository = userPreferencesRepository,
             songMetadataEditor = songMetadataEditor
         )
-        val scope = TestScope(StandardTestDispatcher())
+        val testDispatcher = StandardTestDispatcher()
+        val scope = TestScope(testDispatcher)
+        holder.ioDispatcher = testDispatcher
         val callback = RecordingLyricsLoadCallback()
         val state = MutableStateFlow(StablePlayerState())
         val song = testSong(albumArtUriString = "content://art/song_art_1.jpg").copy(

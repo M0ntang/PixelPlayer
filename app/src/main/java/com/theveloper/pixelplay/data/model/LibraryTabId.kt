@@ -13,6 +13,7 @@ enum class LibraryTabId(
 ) {
     SONGS("SONGS", "SONGS", R.string.library_tab_songs, SortOption.SongTitleAZ),
     ALBUMS("ALBUMS", "ALBUMS", R.string.library_tab_albums, SortOption.AlbumTitleAZ),
+    FAVORITE_ALBUMS("FAVORITE_ALBUMS", "FAVORITE_ALBUMS", R.string.library_tab_favorite_albums, SortOption.AlbumTitleAZ),
     SINGLES("SINGLES", "SINGLES", R.string.library_tab_singles, SortOption.AlbumTitleAZ),
     ARTISTS("ARTIST", "ARTIST", R.string.library_tab_artists, SortOption.ArtistNameAZ),
     PLAYLISTS("PLAYLISTS", "PLAYLISTS", R.string.library_tab_playlists, SortOption.PlaylistNameAZ),

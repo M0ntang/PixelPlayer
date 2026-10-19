@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+﻿@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
 
 package com.theveloper.pixelplay.presentation.screens
 
@@ -401,6 +401,8 @@ private data class LibraryScreenPlayerProjection(
     val currentFavoriteSortOption: SortOption = SortOption.LikedSongDateLiked,
     val currentFolderSortOption: SortOption = SortOption.FolderNameAZ,
     val isAlbumsListView: Boolean = false,
+    val isFavoriteAlbumsListView: Boolean = false,
+    val currentFavoriteAlbumSortOption: SortOption = SortOption.AlbumTitleAZ,
     val isSdCardAvailable: Boolean = false,
     val musicFolders: ImmutableList<MusicFolder> = persistentListOf(),
     val isLoadingLibraryCategories: Boolean = true,
@@ -423,6 +425,8 @@ private fun PlayerUiState.toLibraryScreenProjection(): LibraryScreenPlayerProjec
         currentFavoriteSortOption = currentFavoriteSortOption,
         currentFolderSortOption = currentFolderSortOption,
         isAlbumsListView = isAlbumsListView,
+        isFavoriteAlbumsListView = isFavoriteAlbumsListView,
+        currentFavoriteAlbumSortOption = currentFavoriteAlbumSortOption,
         isSdCardAvailable = isSdCardAvailable,
         musicFolders = musicFolders,
         isLoadingLibraryCategories = isLoadingLibraryCategories,
@@ -702,7 +706,8 @@ fun LibraryScreen(
             when (currentTabId) {
                 LibraryTabId.PLAYLISTS -> isPlaylistSelectionMode
                 LibraryTabId.ALBUMS,
-                LibraryTabId.SINGLES -> isAlbumSelectionMode
+                LibraryTabId.SINGLES,
+                LibraryTabId.FAVORITE_ALBUMS -> isAlbumSelectionMode
                 LibraryTabId.SONGS,
                 LibraryTabId.LIKED,
                 LibraryTabId.FOLDERS -> isSelectionMode
@@ -717,8 +722,16 @@ fun LibraryScreen(
                     !isSortSheetVisible
         }
     }
+    val favoriteAlbumsCurrentFolderId by playerViewModel.favoriteAlbumsCurrentFolderId.collectAsStateWithLifecycle()
+    val canHandleFavoriteAlbumsBack by remember {
+        derivedStateOf {
+            currentTabId == LibraryTabId.FAVORITE_ALBUMS &&
+                    favoriteAlbumsCurrentFolderId != null &&
+                    !isSortSheetVisible
+        }
+    }
 
-    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack) {
+    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack || canHandleFavoriteAlbumsBack) {
         when {
             hasSelectionInCurrentTab -> {
                 when (currentTabId) {
@@ -730,7 +743,8 @@ fun LibraryScreen(
                     }
 
                     LibraryTabId.ALBUMS,
-                    LibraryTabId.SINGLES -> {
+                    LibraryTabId.SINGLES,
+                    LibraryTabId.FAVORITE_ALBUMS -> {
                         selectedAlbums = emptyList()
                         showAlbumMultiSelectionSheet = false
                     }
@@ -744,6 +758,10 @@ fun LibraryScreen(
 
                     LibraryTabId.ARTISTS -> Unit
                 }
+            }
+
+            canHandleFavoriteAlbumsBack -> {
+                playerViewModel.navigateBackFavoriteAlbumFolder()
             }
 
             canHandleFolderBack -> {
@@ -1154,6 +1172,7 @@ fun LibraryScreen(
                             LibraryTabId.PLAYLISTS -> playlistUiState.currentPlaylistSortOption
                             LibraryTabId.LIKED -> playerUiState.currentFavoriteSortOption
                             LibraryTabId.FOLDERS -> playerUiState.currentFolderSortOption
+                            LibraryTabId.FAVORITE_ALBUMS -> playerUiState.currentFavoriteAlbumSortOption
                         }
 
                         val showLocateButton = when (currentTabId) {
@@ -1179,6 +1198,7 @@ fun LibraryScreen(
                                     LibraryTabId.PLAYLISTS -> playlistViewModel.sortPlaylists(option)
                                     LibraryTabId.LIKED -> playerViewModel.sortFavoriteSongs(option)
                                     LibraryTabId.FOLDERS -> playerViewModel.sortFolders(option)
+                                    LibraryTabId.FAVORITE_ALBUMS -> playerViewModel.sortFavoriteAlbums(option)
                                 }
                             }
                         }
@@ -1334,6 +1354,7 @@ fun LibraryScreen(
 
 
                             val isAlbumTab = currentTabId == LibraryTabId.ALBUMS || currentTabId == LibraryTabId.SINGLES
+                            val isFavoriteAlbumsTab = currentTabId == LibraryTabId.FAVORITE_ALBUMS
                             val isFoldersTab = currentTabId == LibraryTabId.FOLDERS
                             val isPlaylistsTab = currentTabId == LibraryTabId.PLAYLISTS
 
@@ -1372,13 +1393,13 @@ fun LibraryScreen(
                                         playerViewModel.setFoldersPlaylistView(isChecked)
                                     }
                                 },
-                                viewToggleContent = if (isAlbumTab) {
+                                viewToggleContent = if (isAlbumTab || isFavoriteAlbumsTab) {
                                     {
                                         Row(
                                             modifier = Modifier.fillMaxWidth().height(48.dp),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            val isList = playerUiState.isAlbumsListView
+                                            val isList = if (isFavoriteAlbumsTab) playerUiState.isFavoriteAlbumsListView else playerUiState.isAlbumsListView
                                             val primaryColor = MaterialTheme.colorScheme.tertiaryContainer
                                             val onPrimaryColor = MaterialTheme.colorScheme.onTertiaryContainer
                                             val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
@@ -1393,7 +1414,13 @@ fun LibraryScreen(
                                                 activeContentColor = MaterialTheme.colorScheme.onPrimary,
                                                 inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 activeCornerRadius = 32.dp,
-                                                onClick = { playerViewModel.setAlbumsListView(false) },
+                                                onClick = {
+                                                    if (isFavoriteAlbumsTab) {
+                                                        playerViewModel.setFavoriteAlbumsListView(false)
+                                                    } else {
+                                                        playerViewModel.setAlbumsListView(false)
+                                                    }
+                                                },
                                                 text = stringResource(R.string.library_view_mode_grid),
                                                 imageVector = Icons.Rounded.ViewModule
                                             )
@@ -1407,7 +1434,13 @@ fun LibraryScreen(
                                                 activeContentColor = MaterialTheme.colorScheme.onPrimary,
                                                 inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 activeCornerRadius = 32.dp,
-                                                onClick = { playerViewModel.setAlbumsListView(true) },
+                                                onClick = {
+                                                    if (isFavoriteAlbumsTab) {
+                                                        playerViewModel.setFavoriteAlbumsListView(true)
+                                                    } else {
+                                                        playerViewModel.setAlbumsListView(true)
+                                                    }
+                                                },
                                                 text = stringResource(R.string.library_view_mode_list),
                                                 imageVector = Icons.AutoMirrored.Rounded.ViewList
                                             )
@@ -1742,6 +1775,41 @@ fun LibraryScreen(
                                             tabId = LibraryTabId.SINGLES
                                         )
                                     }
+                                    LibraryTabId.FAVORITE_ALBUMS -> {
+                                        val favoriteFolders by playerViewModel.favoriteAlbumFoldersInCurrent.collectAsStateWithLifecycle()
+                                        val favoriteAlbums by playerViewModel.favoriteAlbumsInCurrent.collectAsStateWithLifecycle()
+                                        val breadcrumbs by playerViewModel.favoriteAlbumBreadcrumbs.collectAsStateWithLifecycle()
+                                        val currentFolder by playerViewModel.currentFavoriteAlbumFolder.collectAsStateWithLifecycle()
+                                        val allFolders by playerViewModel.allFavoriteAlbumFolders.collectAsStateWithLifecycle()
+
+                                        val stableOnAlbumClick: (Long) -> Unit = remember(navController) {
+                                            { albumId: Long ->
+                                                navController.navigateSafelyReplacing(
+                                                    route = Screen.AlbumDetail.createRoute(albumId),
+                                                    patternToPop = Screen.AlbumDetail.route
+                                                )
+                                            }
+                                        }
+
+                                        LibraryFavoriteAlbumsTab(
+                                            folders = favoriteFolders,
+                                            albums = favoriteAlbums,
+                                            breadcrumbs = breadcrumbs,
+                                            currentFolder = currentFolder,
+                                            allFolders = allFolders,
+                                            isListView = playerUiState.isFavoriteAlbumsListView,
+                                            bottomBarHeight = bottomBarHeightDp,
+                                            playerViewModel = playerViewModel,
+                                            onAlbumClick = stableOnAlbumClick,
+                                            isRefreshing = isRefreshing,
+                                            onRefresh = onRefresh,
+                                            isSelectionMode = isAlbumSelectionMode,
+                                            selectedAlbumIds = selectedAlbumIds,
+                                            onAlbumLongPress = onAlbumLongPress,
+                                            onAlbumSelectionToggle = onAlbumSelectionToggle,
+                                            getSelectionIndex = getAlbumSelectionIndex
+                                        )
+                                    }
                                     null -> Unit
                                 }
                             }
@@ -1749,7 +1817,7 @@ fun LibraryScreen(
                             // Floating selection count pill overlay
                             val selectionCount = when {
                                 currentTabId == LibraryTabId.PLAYLISTS && isPlaylistSelectionMode -> selectedPlaylists.size
-                                (currentTabId == LibraryTabId.ALBUMS || currentTabId == LibraryTabId.SINGLES) && isAlbumSelectionMode -> selectedAlbums.size
+                                (currentTabId == LibraryTabId.ALBUMS || currentTabId == LibraryTabId.SINGLES || currentTabId == LibraryTabId.FAVORITE_ALBUMS) && isAlbumSelectionMode -> selectedAlbums.size
                                 else -> selectedSongs.size
                             }
                             SelectionCountPill(
@@ -2071,6 +2139,17 @@ fun LibraryScreen(
             },
             onHideFromAlbums = {
                 playerViewModel.hideSelectedAlbums(selectedAlbums)
+                selectedAlbums = emptyList()
+                showAlbumMultiSelectionSheet = false
+            },
+            onAddToFavorites = {
+                val albumIds = selectedAlbums.map { it.id }
+                playerViewModel.addAlbumsToFavorites(albumIds)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.favorite_albums_toast_n_added, albumIds.size),
+                    Toast.LENGTH_SHORT
+                ).show()
                 selectedAlbums = emptyList()
                 showAlbumMultiSelectionSheet = false
             }
@@ -2871,6 +2950,7 @@ private fun LibraryTabId.iconRes(): Int = when (this) {
     LibraryTabId.PLAYLISTS -> R.drawable.rounded_playlist_play_24
     LibraryTabId.FOLDERS -> R.drawable.rounded_folder_24
     LibraryTabId.LIKED -> R.drawable.round_favorite_24
+    LibraryTabId.FAVORITE_ALBUMS -> R.drawable.round_favorite_24
 }
 
 @Composable
@@ -2887,10 +2967,10 @@ internal fun resolveFolderNavigationDirection(initialPath: String?, targetPath: 
     }
 
 private fun isDescendantFolderPath(ancestorPath: String, candidatePath: String): Boolean {
-    val normalizedAncestor = ancestorPath.trimEnd(File.separatorChar)
-    val normalizedCandidate = candidatePath.trimEnd(File.separatorChar)
+    val normalizedAncestor = ancestorPath.replace('\\', '/').trimEnd('/')
+    val normalizedCandidate = candidatePath.replace('\\', '/').trimEnd('/')
     if (normalizedAncestor == normalizedCandidate) return false
-    return normalizedCandidate.startsWith("$normalizedAncestor${File.separatorChar}")
+    return normalizedCandidate.startsWith("$normalizedAncestor/")
 }
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3ExpressiveApi::class)

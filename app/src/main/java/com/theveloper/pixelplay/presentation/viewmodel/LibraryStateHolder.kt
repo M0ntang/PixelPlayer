@@ -128,6 +128,9 @@ class LibraryStateHolder @Inject constructor(
     private val _currentFavoriteSortOption = MutableStateFlow<SortOption>(SortOption.LikedSongDateLiked)
     val currentFavoriteSortOption = _currentFavoriteSortOption.asStateFlow()
 
+    private val _currentFavoriteAlbumSortOption = MutableStateFlow<SortOption>(SortOption.AlbumTitleAZ)
+    val currentFavoriteAlbumSortOption = _currentFavoriteAlbumSortOption.asStateFlow()
+
     private data class AlbumQueryCriteria(
         val minTracks: Int,
         val excludeSingles: Boolean,
@@ -289,6 +292,9 @@ class LibraryStateHolder @Inject constructor(
 
             val likedSortKey = userPreferencesRepository.likedSongsSortOptionFlow.first()
             _currentFavoriteSortOption.value = SortOption.LIKED.find { it.storageKey == likedSortKey } ?: SortOption.LikedSongDateLiked
+
+            val favoriteAlbumSortKey = userPreferencesRepository.favoriteAlbumsSortOptionFlow.first()
+            _currentFavoriteAlbumSortOption.value = SortOption.ALBUMS.find { it.storageKey == favoriteAlbumSortKey } ?: SortOption.AlbumTitleAZ
 
             // Restore last storage filter (All / Cloud / Local)
             _currentStorageFilter.value = userPreferencesRepository.lastStorageFilterFlow.first()
@@ -541,7 +547,19 @@ class LibraryStateHolder @Inject constructor(
         }
     }
 
-    private fun sortAlbumsList(albums: Iterable<Album>, sortOption: SortOption): List<Album> {
+    fun sortFavoriteAlbums(sortOption: SortOption, persist: Boolean = true) {
+        scope?.launch {
+            if (persist && _currentFavoriteAlbumSortOption.value.storageKey == sortOption.storageKey) {
+                return@launch
+            }
+            if (persist) {
+                userPreferencesRepository.setFavoriteAlbumsSortOption(sortOption.storageKey)
+            }
+            _currentFavoriteAlbumSortOption.value = sortOption
+        }
+    }
+
+    internal fun sortAlbumsList(albums: Iterable<Album>, sortOption: SortOption): List<Album> {
         return when (sortOption) {
             SortOption.AlbumTitleAZ -> albums.sortedWith(
                 compareBy<Album> { it.title.lowercase() }

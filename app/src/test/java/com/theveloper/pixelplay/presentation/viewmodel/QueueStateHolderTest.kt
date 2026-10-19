@@ -1,4 +1,4 @@
-package com.theveloper.pixelplay.presentation.viewmodel
+﻿package com.theveloper.pixelplay.presentation.viewmodel
 
 import com.theveloper.pixelplay.MainCoroutineExtension
 import com.theveloper.pixelplay.data.model.Album
@@ -32,7 +32,10 @@ class QueueStateHolderTest {
     private val musicRepository: MusicRepository = mockk(relaxed = true)
     private val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true)
 
-    private fun holder() = QueueStateHolder(musicRepository, userPreferencesRepository)
+    private fun holder(): QueueStateHolder {
+        every { userPreferencesRepository.hiddenAlbumSongKeysFlow } returns flowOf(emptySet())
+        return QueueStateHolder(musicRepository, userPreferencesRepository)
+    }
 
     private fun song(id: String, title: String = "Song $id", track: Int = 0, disc: Int? = null) = Song(
         id = id,
