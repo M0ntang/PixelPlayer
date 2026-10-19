@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.13-beta] - 2026-10-19
+
+### Changed & Refined
+- **Smooth Arc Animation for Album Detail Heart:** Replaced discrete Column/Row layout switching with a continuous, gesture-driven curved trajectory. As the album header collapses upon scrolling down, the favorite heart button smoothly glides up and out around the pencil icon into its docked top bar position without sudden jumps.
+- **Collapsed Header Text Clearance:** Increased collapsed header title and subtitle end padding from 108.dp to 132.dp when the favorites action is enabled, providing 32.dp of clean whitespace and preventing album title and duration text from touching the heart button.
+- **Title Scale Anchor:** Fixed title scale transform origin to start (`TransformOrigin(0f, 0.5f)`), ensuring zero text drift during collapse transitions.
+
 ## [0.8.12-beta] - 2026-10-19
 
 ### Removed

@@ -98,6 +98,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp as lerpColor
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -142,6 +143,9 @@ import com.theveloper.pixelplay.utils.formatSongCount
 import com.theveloper.pixelplay.utils.shapes.RoundedStarShape
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlin.math.PI
+import kotlin.math.sin
+import kotlin.math.cos
 import androidx.compose.ui.res.stringResource
 
 private const val UseSharedCollapsibleTopBarProbe = true
@@ -947,9 +951,9 @@ private fun SharedAlbumTopBarProbe(
         }
 
         val (collapsedTitleStartPadding, collapsedTitleEndPadding) = when (headerActionsLayout) {
-            HeaderActionsLayout.ALL_LEFT -> (if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp) to 24.dp
-            HeaderActionsLayout.ALL_RIGHT -> 24.dp to (if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp)
-            else -> 68.dp to (if (isFavoriteAlbumsTabEnabled) 108.dp else 68.dp)
+            HeaderActionsLayout.ALL_LEFT -> (if (isFavoriteAlbumsTabEnabled) 172.dp else 124.dp) to 24.dp
+            HeaderActionsLayout.ALL_RIGHT -> 24.dp to (if (isFavoriteAlbumsTabEnabled) 172.dp else 124.dp)
+            else -> 68.dp to (if (isFavoriteAlbumsTabEnabled) 132.dp else 68.dp)
         }
 
         CollapsibleCommonTopBar(
@@ -1103,33 +1107,30 @@ private fun SharedAlbumTopBarProbe(
                         ) {
                             backButton()
                         }
-                        if (isExpanded) {
-                            Column(
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 12.dp, top = 4.dp)
+                                .zIndex(2f)
+                        ) {
+                            editPencilButton()
+                        }
+
+                        if (isFavoriteAlbumsTabEnabled) {
+                            val t = collapseFraction.coerceIn(0f, 1f)
+                            val angle = t * (PI.toFloat() / 2f)
+                            val heartXOffset = (-48f * sin(angle) - 10f * sin(t * PI.toFloat())).dp
+                            val heartYOffset = (46f * cos(angle)).dp
+
+                            Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(end = 12.dp, top = 4.dp)
-                                    .zIndex(1f),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .offset(x = heartXOffset, y = heartYOffset)
+                                    .zIndex(1f)
                             ) {
-                                editPencilButton()
-                                if (isFavoriteAlbumsTabEnabled) {
-                                    favoriteAlbumButton()
-                                }
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(end = 12.dp, top = 4.dp)
-                                    .zIndex(1f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (isFavoriteAlbumsTabEnabled) {
-                                    favoriteAlbumButton()
-                                }
-                                editPencilButton()
+                                favoriteAlbumButton()
                             }
                         }
                     }
@@ -1215,7 +1216,7 @@ private fun CollapsingAlbumTopBar(
     val titlePaddingStart = lerp(
         24.dp,
         when (headerActionsLayout) {
-            HeaderActionsLayout.ALL_LEFT -> if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp
+            HeaderActionsLayout.ALL_LEFT -> if (isFavoriteAlbumsTabEnabled) 172.dp else 124.dp
             HeaderActionsLayout.ALL_RIGHT -> 24.dp
             else -> 68.dp
         },
@@ -1224,9 +1225,9 @@ private fun CollapsingAlbumTopBar(
     val titlePaddingEnd = lerp(
         120.dp,
         when (headerActionsLayout) {
-            HeaderActionsLayout.ALL_RIGHT -> if (isFavoriteAlbumsTabEnabled) 144.dp else 108.dp
+            HeaderActionsLayout.ALL_RIGHT -> if (isFavoriteAlbumsTabEnabled) 172.dp else 124.dp
             HeaderActionsLayout.ALL_LEFT -> 24.dp
-            else -> if (isFavoriteAlbumsTabEnabled) 108.dp else 68.dp
+            else -> if (isFavoriteAlbumsTabEnabled) 132.dp else 68.dp
         },
         collapseFraction
     )
@@ -1467,33 +1468,30 @@ private fun CollapsingAlbumTopBar(
                         ) {
                             backButton()
                         }
-                        if (isExpanded) {
-                            Column(
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 12.dp, top = 4.dp)
+                                .zIndex(2f)
+                        ) {
+                            editPencilButton()
+                        }
+
+                        if (isFavoriteAlbumsTabEnabled) {
+                            val t = collapseFraction.coerceIn(0f, 1f)
+                            val angle = t * (PI.toFloat() / 2f)
+                            val heartXOffset = (-48f * sin(angle) - 10f * sin(t * PI.toFloat())).dp
+                            val heartYOffset = (46f * cos(angle)).dp
+
+                            Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(end = 12.dp, top = 4.dp)
-                                    .zIndex(1f),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .offset(x = heartXOffset, y = heartYOffset)
+                                    .zIndex(1f)
                             ) {
-                                editPencilButton()
-                                if (isFavoriteAlbumsTabEnabled) {
-                                    favoriteAlbumButton()
-                                }
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(end = 12.dp, top = 4.dp)
-                                    .zIndex(1f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (isFavoriteAlbumsTabEnabled) {
-                                    favoriteAlbumButton()
-                                }
-                                editPencilButton()
+                                favoriteAlbumButton()
                             }
                         }
                     }
@@ -1513,6 +1511,7 @@ private fun CollapsingAlbumTopBar(
                             .graphicsLayer {
                                 scaleX = titleScale
                                 scaleY = titleScale
+                                transformOrigin = TransformOrigin(0f, 0.5f)
                             },
                         verticalArrangement = Arrangement.Center
                     ) {
