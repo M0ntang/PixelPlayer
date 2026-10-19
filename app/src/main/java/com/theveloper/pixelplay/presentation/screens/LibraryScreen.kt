@@ -1,4 +1,4 @@
-﻿@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
 
 package com.theveloper.pixelplay.presentation.screens
 
@@ -466,6 +466,7 @@ fun LibraryScreen(
 
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showPlaylistBottomSheet by remember { mutableStateOf(false) }
+    var showCreateFavoriteFolderDialog by remember { mutableStateOf(false) }
     var playlistSheetSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val tabTitles by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
@@ -1303,6 +1304,7 @@ fun LibraryScreen(
                                             LibraryTabId.ALBUMS -> playerViewModel.shuffleRandomAlbum()
                                             LibraryTabId.SINGLES -> playerViewModel.shuffleRandomSingle()
                                             LibraryTabId.ARTISTS -> playerViewModel.shuffleRandomArtist()
+                                            LibraryTabId.FAVORITE_ALBUMS -> playerViewModel.shuffleFavoriteAlbums()
                                             else -> playerViewModel.shuffleAllSongs()
                                         }
                                     },
@@ -1329,7 +1331,9 @@ fun LibraryScreen(
                                             currentTabId == LibraryTabId.LIKED ||
                                             (ENABLE_FOLDERS_STORAGE_FILTER && currentTabId == LibraryTabId.FOLDERS),
                                     currentStorageFilter = playerUiState.currentStorageFilter,
-                                    onStorageFilterClick = { playerViewModel.toggleStorageFilter() }
+                                    onStorageFilterClick = { playerViewModel.toggleStorageFilter() },
+                                    showCreateFolderButton = currentTabId == LibraryTabId.FAVORITE_ALBUMS,
+                                    onCreateFolderClick = { showCreateFavoriteFolderDialog = true }
                                 )
                             }
                         }
@@ -2226,6 +2230,18 @@ fun LibraryScreen(
                 playerViewModel.resetLibraryTabsOrder()
             },
             onDismiss = { showReorderTabsSheet = false }
+        )
+    }
+
+    if (showCreateFavoriteFolderDialog) {
+        val currentFavoriteFolder by playerViewModel.currentFavoriteAlbumFolder.collectAsStateWithLifecycle()
+        CreateFavoriteFolderDialog(
+            isSubfolder = currentFavoriteFolder != null,
+            onDismiss = { showCreateFavoriteFolderDialog = false },
+            onCreate = { name ->
+                playerViewModel.createFavoriteAlbumFolder(name, currentFavoriteFolder?.id)
+                showCreateFavoriteFolderDialog = false
+            }
         )
     }
 

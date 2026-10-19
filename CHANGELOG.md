@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.8.11-beta] - 2026-10-19
+
+### Added
+- **Circular "Create Folder" Action:** Added a circular green tonal icon button directly beside the Shuffle button in the library header bar when browsing favorite albums.
+- **Inside-Folder Header Banner:** Modern expressive folder banner with breadcrumb navigation, dynamic collage artwork, Play All, Shuffle, and Create Subfolder actions.
+- **Flight & Tactile Favorite Heart Button:** Completely redesigned the favorite album toggle in Album Detail screen with bouncy spring scale animation, tactile haptic feedback (`HapticFeedbackType.LongPress`), and a flight arc animation that smoothly glides into the top bar beside the back button when scrolling/collapsing.
+
+### Changed & Redesigned
+- **Favorite Albums Tab Clean-up:** Completely removed redundant top button rows and obsolete "Add albums to folder" bottom sheet for a clean, cohesive Spotify-like library interface.
+- **Native Folder Grid & List Styling:** Upgraded folder cards to match PixelPlayer's native album designs (`AlbumGridItemRedesigned` with 20.dp squircles and `AlbumListItem` with 88.dp height and dithered scrims).
+- **Expressive Action & Move Sheets:** Redesigned album and folder context sheets to match PixelPlayer's Material 3 Expressive bottom sheets with squircle artwork preview, Google Sans Rounded typography, pill action items, and quick folder creation.
+- **Album Detail Text Clearance:** Relocated the heart button away from the top-right to the side when expanded and beside the back button when collapsed, permanently resolving subtitle/duration text truncation (`... 56 минут`) and cover overlaps.
 
 ## [0.8.10-beta] - 2026-10-19
 

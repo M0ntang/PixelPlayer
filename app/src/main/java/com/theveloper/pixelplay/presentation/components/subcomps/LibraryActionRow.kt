@@ -36,6 +36,7 @@ import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Dataset
@@ -105,7 +106,9 @@ fun LibraryActionRow(
     // Storage Filter
     showStorageFilterButton: Boolean = false,
     currentStorageFilter: com.theveloper.pixelplay.data.model.StorageFilter = com.theveloper.pixelplay.data.model.StorageFilter.ALL,
-    onStorageFilterClick: () -> Unit = {}
+    onStorageFilterClick: () -> Unit = {},
+    showCreateFolderButton: Boolean = false,
+    onCreateFolderClick: () -> Unit = {}
 ) {
     val shouldShowImport = isPlaylistTab && showImportButton
 
@@ -197,6 +200,46 @@ fun LibraryActionRow(
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Medium
                             )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showCreateFolderButton,
+                        enter = fadeIn() + expandHorizontally(
+                            expandFrom = Alignment.Start,
+                            clip = false,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        ),
+                        exit = fadeOut() + shrinkHorizontally(
+                            shrinkTowards = Alignment.Start,
+                            clip = false,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            )
+                        )
+                    ) {
+                        Row(modifier = Modifier.height(genHeight), verticalAlignment = Alignment.CenterVertically) {
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            FilledTonalIconButton(
+                                onClick = onCreateFolderClick,
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = buttonContainerColor,
+                                    contentColor = buttonContentColor
+                                ),
+                                modifier = Modifier.size(genHeight)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.CreateNewFolder,
+                                    contentDescription = stringResource(R.string.favorite_albums_create_folder),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
 

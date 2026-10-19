@@ -21,6 +21,7 @@
     <string name="favorite_albums_add">Добавить в любимое</string>
     <string name="favorite_albums_remove">Удалить из любимого</string>
     <string name="favorite_albums_create_folder">Создать папку</string>
+    <string name="favorite_albums_folder_type_label">Папка</string>
     <string name="favorite_albums_create_subfolder">Создать подпапку</string>
     <string name="favorite_albums_new_folder_title">Новая папка</string>
     <string name="favorite_albums_folder_name_hint">Название папки</string>

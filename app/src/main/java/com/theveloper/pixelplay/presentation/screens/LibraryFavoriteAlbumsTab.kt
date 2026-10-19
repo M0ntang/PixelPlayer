@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,31 +40,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DriveFileMove
+import androidx.compose.material.icons.automirrored.rounded.DriveFileMove
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,11 +63,9 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -87,21 +75,21 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,8 +104,10 @@ import com.theveloper.pixelplay.data.model.Album
 import com.theveloper.pixelplay.data.model.FavoriteAlbumFolder
 import com.theveloper.pixelplay.data.preferences.HeaderCoverStyle
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
+import com.theveloper.pixelplay.presentation.components.ditheredCardScrim
+import com.theveloper.pixelplay.presentation.components.ditheredHorizontalCardScrim
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.theveloper.pixelplay.ui.theme.GoogleSansRounded
 
 @UnstableApi
 @Composable
@@ -141,13 +131,11 @@ fun LibraryFavoriteAlbumsTab(
 ) {
     val context = LocalContext.current
     val headerCoverStyle by playerViewModel.headerCoverStyle.collectAsStateWithLifecycle()
-    val allLibraryAlbums by playerViewModel.albumsFlow.collectAsStateWithLifecycle()
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var folderToRename by remember { mutableStateOf<FavoriteAlbumFolder?>(null) }
     var folderToDelete by remember { mutableStateOf<FavoriteAlbumFolder?>(null) }
     var albumToMove by remember { mutableStateOf<Album?>(null) }
-    var showAddAlbumsSheet by remember { mutableStateOf(false) }
     var albumForActionMenu by remember { mutableStateOf<Album?>(null) }
 
     val pullToRefreshState = rememberPullToRefreshState()
@@ -170,7 +158,7 @@ fun LibraryFavoriteAlbumsTab(
         }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Breadcrumbs Bar (if inside a folder)
+            // Breadcrumbs Bar (when inside a folder)
             if (currentFolder != null) {
                 BreadcrumbsBar(
                     breadcrumbs = breadcrumbs,
@@ -182,11 +170,9 @@ fun LibraryFavoriteAlbumsTab(
             }
 
             if (isEmpty) {
-                // Empty state
                 FavoriteAlbumsEmptyState(
                     isInsideFolder = currentFolder != null,
                     folderName = currentFolder?.name,
-                    onAddAlbumsClick = { showAddAlbumsSheet = true },
                     onCreateFolderClick = { showCreateFolderDialog = true },
                     bottomBarHeight = bottomBarHeight
                 )
@@ -200,19 +186,19 @@ fun LibraryFavoriteAlbumsTab(
                         contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap + 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Header actions (Play all, Shuffle, Add, New Folder)
-                        item(key = "favorite_albums_header_actions") {
-                            FavoriteAlbumsHeaderSection(
-                                currentFolder = currentFolder,
-                                folderCount = folders.size,
-                                albumCount = albums.size,
-                                onPlayAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder?.id, shuffle = false) },
-                                onShuffleAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder?.id, shuffle = true) },
-                                onAddAlbums = { showAddAlbumsSheet = true },
-                                onCreateFolder = { showCreateFolderDialog = true },
-                                onRenameFolder = { currentFolder?.let { folderToRename = it } },
-                                onDeleteFolder = { currentFolder?.let { folderToDelete = it } }
-                            )
+                        // When inside a folder: render the folder header banner
+                        if (currentFolder != null) {
+                            item(key = "favorite_albums_folder_banner") {
+                                FavoriteAlbumsFolderHeaderBanner(
+                                    currentFolder = currentFolder,
+                                    albumCount = albums.size,
+                                    onPlayAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder.id, shuffle = false) },
+                                    onShuffleAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder.id, shuffle = true) },
+                                    onCreateSubfolder = { showCreateFolderDialog = true },
+                                    onRenameFolder = { folderToRename = currentFolder },
+                                    onDeleteFolder = { folderToDelete = currentFolder }
+                                )
+                            }
                         }
 
                         // Folders list items
@@ -226,6 +212,7 @@ fun LibraryFavoriteAlbumsTab(
                             ) { folder ->
                                 FavoriteFolderListItem(
                                     folder = folder,
+                                    headerCoverStyle = headerCoverStyle,
                                     onClick = { playerViewModel.navigateToFavoriteAlbumFolder(folder.id) },
                                     onPlay = { playerViewModel.playFavoriteAlbumFolder(folder.id, shuffle = false) },
                                     onShuffle = { playerViewModel.playFavoriteAlbumFolder(folder.id, shuffle = true) },
@@ -288,19 +275,19 @@ fun LibraryFavoriteAlbumsTab(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Header actions spanning full width
-                        item(span = { GridItemSpan(2) }, key = "favorite_albums_header_actions") {
-                            FavoriteAlbumsHeaderSection(
-                                currentFolder = currentFolder,
-                                folderCount = folders.size,
-                                albumCount = albums.size,
-                                onPlayAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder?.id, shuffle = false) },
-                                onShuffleAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder?.id, shuffle = true) },
-                                onAddAlbums = { showAddAlbumsSheet = true },
-                                onCreateFolder = { showCreateFolderDialog = true },
-                                onRenameFolder = { currentFolder?.let { folderToRename = it } },
-                                onDeleteFolder = { currentFolder?.let { folderToDelete = it } }
-                            )
+                        // When inside a folder: render the folder header banner spanning full width
+                        if (currentFolder != null) {
+                            item(span = { GridItemSpan(2) }, key = "favorite_albums_folder_banner") {
+                                FavoriteAlbumsFolderHeaderBanner(
+                                    currentFolder = currentFolder,
+                                    albumCount = albums.size,
+                                    onPlayAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder.id, shuffle = false) },
+                                    onShuffleAll = { playerViewModel.playFavoriteAlbumFolder(currentFolder.id, shuffle = true) },
+                                    onCreateSubfolder = { showCreateFolderDialog = true },
+                                    onRenameFolder = { folderToRename = currentFolder },
+                                    onDeleteFolder = { folderToDelete = currentFolder }
+                                )
+                            }
                         }
 
                         // Folders Grid items
@@ -314,6 +301,7 @@ fun LibraryFavoriteAlbumsTab(
                             ) { folder ->
                                 FavoriteFolderGridItem(
                                     folder = folder,
+                                    headerCoverStyle = headerCoverStyle,
                                     onClick = { playerViewModel.navigateToFavoriteAlbumFolder(folder.id) },
                                     onPlay = { playerViewModel.playFavoriteAlbumFolder(folder.id, shuffle = false) },
                                     onShuffle = { playerViewModel.playFavoriteAlbumFolder(folder.id, shuffle = true) },
@@ -411,6 +399,7 @@ fun LibraryFavoriteAlbumsTab(
             album = album,
             allFolders = allFolders,
             onDismiss = { albumToMove = null },
+            onCreateFolder = { showCreateFolderDialog = true },
             onMoveToFolder = { albumId, targetFolderId, targetFolderName ->
                 playerViewModel.moveAlbumToFolder(albumId, targetFolderId)
                 albumToMove = null
@@ -420,24 +409,7 @@ fun LibraryFavoriteAlbumsTab(
         )
     }
 
-    // Sheet: Add Albums To Folder
-    if (showAddAlbumsSheet) {
-        val currentAlbumIds = remember(albums) { albums.map { it.id }.toSet() }
-        AddAlbumsToFolderSheet(
-            allAlbums = allLibraryAlbums,
-            currentAlbumIds = currentAlbumIds,
-            folderName = currentFolder?.name ?: stringResource(R.string.favorite_albums_root_folder),
-            onDismiss = { showAddAlbumsSheet = false },
-            onAdd = { selectedIds ->
-                playerViewModel.addAlbumsToFavorites(selectedIds, currentFolder?.id)
-                showAddAlbumsSheet = false
-                val msg = context.getString(R.string.favorite_albums_toast_n_added, selectedIds.size)
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            }
-        )
-    }
-
-    // Sheet: Album Action Menu
+    // Sheet: Album Action Menu (Screenshot 3 replacement)
     albumForActionMenu?.let { album ->
         FavoriteAlbumActionSheet(
             album = album,
@@ -449,6 +421,10 @@ fun LibraryFavoriteAlbumsTab(
             onMoveToFolder = {
                 albumToMove = album
                 albumForActionMenu = null
+            },
+            onCreateFolder = {
+                albumForActionMenu = null
+                showCreateFolderDialog = true
             },
             onRemoveFromFavorites = {
                 playerViewModel.removeAlbumFromFavorites(album.id)
@@ -463,7 +439,7 @@ fun LibraryFavoriteAlbumsTab(
 private fun SectionHeader(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.titleMedium.copy(fontFamily = GoogleSansRounded),
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 2.dp)
@@ -568,169 +544,151 @@ private fun BreadcrumbsBar(
     }
 }
 
+/**
+ * Modern expressive banner shown inside a folder.
+ */
 @Composable
-private fun FavoriteAlbumsHeaderSection(
-    currentFolder: FavoriteAlbumFolder?,
-    folderCount: Int,
+private fun FavoriteAlbumsFolderHeaderBanner(
+    currentFolder: FavoriteAlbumFolder,
     albumCount: Int,
     onPlayAll: () -> Unit,
     onShuffleAll: () -> Unit,
-    onAddAlbums: () -> Unit,
-    onCreateFolder: () -> Unit,
+    onCreateSubfolder: () -> Unit,
     onRenameFolder: () -> Unit,
     onDeleteFolder: () -> Unit
 ) {
-    if (currentFolder != null) {
-        // Inside a folder: Folder Card Banner
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    FolderCoverCollage(
-                        previewArtworkUris = currentFolder.previewArtUris,
-                        modifier = Modifier.size(72.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    )
+    var showMenu by remember { mutableStateOf(false) }
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = currentFolder.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                FolderCoverCollage(
+                    previewArtworkUris = currentFolder.previewArtUris,
+                    modifier = Modifier.size(80.dp),
+                    shape = RoundedCornerShape(20.dp)
+                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = currentFolder.name,
+                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = GoogleSansRounded),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val infoText = when {
+                        currentFolder.subfolderCount > 0 && currentFolder.albumCount > 0 ->
+                            stringResource(
                                 R.string.favorite_albums_folder_subtitle,
                                 currentFolder.subfolderCount.toString(),
                                 currentFolder.albumCount.toString()
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        currentFolder.subfolderCount > 0 ->
+                            stringResource(R.string.favorite_albums_folders_count, currentFolder.subfolderCount)
+                        else ->
+                            stringResource(R.string.favorite_albums_folder_item_desc, currentFolder.albumCount)
+                    }
+                    Text(
+                        text = infoText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-
-                    var showMenu by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Rounded.MoreVert, contentDescription = null)
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.favorite_albums_rename_folder)) },
-                                leadingIcon = { Icon(Icons.Rounded.Edit, null) },
-                                onClick = {
-                                    showMenu = false
-                                    onRenameFolder()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.favorite_albums_delete_folder)) },
-                                leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                onClick = {
-                                    showMenu = false
-                                    onDeleteFolder()
-                                }
-                            )
-                        }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.favorite_albums_rename_folder)) },
+                            leadingIcon = { Icon(Icons.Rounded.Edit, null) },
+                            onClick = {
+                                showMenu = false
+                                onRenameFolder()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.favorite_albums_delete_folder)) },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                onDeleteFolder()
+                            }
+                        )
                     }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Actions row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (albumCount > 0) {
-                        FilledTonalButton(
-                            onClick = onPlayAll,
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.favorite_albums_play_folder))
-                        }
-                        FilledTonalIconButton(onClick = onShuffleAll) {
-                            Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        }
-                    }
-
-                    AssistChip(
-                        onClick = onAddAlbums,
-                        label = { Text(stringResource(R.string.favorite_albums_add_albums)) },
-                        leadingIcon = { Icon(Icons.Rounded.Add, null, modifier = Modifier.size(18.dp)) },
-                        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                    )
-
-                    AssistChip(
-                        onClick = onCreateFolder,
-                        label = { Text(stringResource(R.string.favorite_albums_create_subfolder)) },
-                        leadingIcon = { Icon(Icons.Rounded.CreateNewFolder, null, modifier = Modifier.size(18.dp)) },
-                        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                    )
-                }
-            }
-        }
-    } else {
-        // Root: Clean Horizontal Actions Row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (albumCount > 0) {
-                FilledTonalButton(
-                    onClick = onPlayAll,
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.favorite_albums_play_folder))
-                }
-                FilledTonalIconButton(onClick = onShuffleAll) {
-                    Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             }
 
-            AssistChip(
-                onClick = onCreateFolder,
-                label = { Text(stringResource(R.string.favorite_albums_create_folder)) },
-                leadingIcon = { Icon(Icons.Rounded.CreateNewFolder, null, modifier = Modifier.size(18.dp)) },
-                colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-            )
+            Spacer(modifier = Modifier.height(14.dp))
 
-            AssistChip(
-                onClick = onAddAlbums,
-                label = { Text(stringResource(R.string.favorite_albums_add_albums)) },
-                leadingIcon = { Icon(Icons.Rounded.Add, null, modifier = Modifier.size(18.dp)) },
-                colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (albumCount > 0) {
+                    FilledTonalButton(
+                        onClick = onPlayAll,
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.favorite_albums_play_folder), style = MaterialTheme.typography.labelLarge)
+                    }
+
+                    FilledTonalIconButton(
+                        onClick = onShuffleAll,
+                        shape = CircleShape,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                FilledTonalIconButton(
+                    onClick = onCreateSubfolder,
+                    shape = CircleShape,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    ),
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CreateNewFolder,
+                        contentDescription = stringResource(R.string.favorite_albums_create_subfolder),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
     }
 }
 
+/**
+ * 2x2 collage artwork or stylized folder placeholder for folders.
+ */
 @Composable
 fun FolderCoverCollage(
     previewArtworkUris: List<String?>,
@@ -750,12 +708,26 @@ fun FolderCoverCollage(
 
         when (validUris.size) {
             0 -> {
-                Icon(
-                    imageVector = Icons.Rounded.Folder,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.FolderOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                    )
+                }
             }
             1 -> {
                 AsyncImage(
@@ -849,189 +821,126 @@ fun FolderCoverCollage(
     }
 }
 
+/**
+ * Redesigned Folder Grid Item matching [AlbumGridItemRedesigned] aesthetic.
+ */
 @Composable
 private fun FavoriteFolderGridItem(
     folder: FavoriteAlbumFolder,
+    headerCoverStyle: String,
     onClick: () -> Unit,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
+    val currentMaterialColorScheme = MaterialTheme.colorScheme
+    val gradientBaseColor = currentMaterialColorScheme.primaryContainer
+    val onGradientColor = currentMaterialColorScheme.onPrimaryContainer
+    val cardCornerRadius = 20.dp
+    val cardShape = RoundedCornerShape(cardCornerRadius)
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clip(cardShape)
+            .clickable(onClick = onClick),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = currentMaterialColorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Box {
+            Column(
+                modifier = Modifier.background(
+                    color = gradientBaseColor,
+                    shape = cardShape
+                )
+            ) {
+                Box(contentAlignment = Alignment.BottomStart) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(if (isSquareMode) 1f else 3f / 2f)
+                    ) {
+                        FolderCoverCollage(
+                            previewArtworkUris = folder.previewArtUris,
+                            modifier = Modifier.fillMaxSize(),
+                            shape = RoundedCornerShape(topStart = cardCornerRadius, topEnd = cardCornerRadius)
+                        )
+                    }
+
+                    if (!isSquareMode) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .ditheredCardScrim(gradientBaseColor)
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(84.dp)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = folder.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = GoogleSansRounded),
+                        fontWeight = FontWeight.Bold,
+                        color = onGradientColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = stringResource(R.string.favorite_albums_folder_type_label),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onGradientColor.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val infoText = when {
+                        folder.subfolderCount > 0 && folder.albumCount > 0 ->
+                            stringResource(R.string.favorite_albums_folder_subtitle, folder.subfolderCount.toString(), folder.albumCount.toString())
+                        folder.subfolderCount > 0 ->
+                            stringResource(R.string.favorite_albums_folders_count, folder.subfolderCount)
+                        else ->
+                            stringResource(R.string.favorite_albums_folder_item_desc, folder.albumCount)
+                    }
+                    Text(
+                        text = infoText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onGradientColor.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Sleek Options Button in TopEnd
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
             ) {
-                FolderCoverCollage(
-                    previewArtworkUris = folder.previewArtUris,
-                    modifier = Modifier.fillMaxSize(),
-                    shape = RoundedCornerShape(14.dp)
-                )
-
-                // Menu button in top right corner
-                Box(modifier = Modifier.align(Alignment.TopEnd)) {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.MoreVert,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(16.dp)
-                            )
-                        }
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.favorite_albums_play_folder)) },
-                            leadingIcon = { Icon(Icons.Rounded.PlayArrow, null) },
-                            onClick = {
-                                showMenu = false
-                                onPlay()
-                            }
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+                            shape = CircleShape
                         )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.favorite_albums_shuffle_folder)) },
-                            leadingIcon = { Icon(Icons.Rounded.Shuffle, null) },
-                            onClick = {
-                                showMenu = false
-                                onShuffle()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.favorite_albums_rename_folder)) },
-                            leadingIcon = { Icon(Icons.Rounded.Edit, null) },
-                            onClick = {
-                                showMenu = false
-                                onRename()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.favorite_albums_delete_folder)) },
-                            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                onDelete()
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = folder.name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-
-            val infoText = when {
-                folder.subfolderCount > 0 && folder.albumCount > 0 ->
-                    stringResource(R.string.favorite_albums_folder_subtitle, folder.subfolderCount.toString(), folder.albumCount.toString())
-                folder.subfolderCount > 0 ->
-                    stringResource(R.string.favorite_albums_folders_count, folder.subfolderCount)
-                else ->
-                    stringResource(R.string.favorite_albums_folder_item_desc, folder.albumCount)
-            }
-
-            Text(
-                text = infoText,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun FavoriteFolderListItem(
-    folder: FavoriteAlbumFolder,
-    onClick: () -> Unit,
-    onPlay: () -> Unit,
-    onShuffle: () -> Unit,
-    onRename: () -> Unit,
-    onDelete: () -> Unit
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            FolderCoverCollage(
-                previewArtworkUris = folder.previewArtUris,
-                modifier = Modifier.size(54.dp),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = folder.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                val infoText = when {
-                    folder.subfolderCount > 0 && folder.albumCount > 0 ->
-                        stringResource(R.string.favorite_albums_folder_subtitle, folder.subfolderCount.toString(), folder.albumCount.toString())
-                    folder.subfolderCount > 0 ->
-                        stringResource(R.string.favorite_albums_folders_count, folder.subfolderCount)
-                    else ->
-                        stringResource(R.string.favorite_albums_folder_item_desc, folder.albumCount)
-                }
-                Text(
-                    text = infoText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Box {
-                IconButton(onClick = { showMenu = true }) {
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.MoreVert,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -1077,11 +986,166 @@ private fun FavoriteFolderListItem(
     }
 }
 
+/**
+ * Redesigned Folder List Item matching [AlbumListItem] aesthetic.
+ */
+@Composable
+private fun FavoriteFolderListItem(
+    folder: FavoriteAlbumFolder,
+    headerCoverStyle: String,
+    onClick: () -> Unit,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val isSquareMode = headerCoverStyle == HeaderCoverStyle.SQUARE
+    val currentMaterialColorScheme = MaterialTheme.colorScheme
+    val gradientBaseColor = currentMaterialColorScheme.primaryContainer
+    val onGradientColor = currentMaterialColorScheme.onPrimaryContainer
+    val cardCornerRadius = 16.dp
+    val cardShape = RoundedCornerShape(cardCornerRadius)
+    var showMenu by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(88.dp)
+            .clip(cardShape)
+            .clickable(onClick = onClick),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = currentMaterialColorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                // LEFT: Folder Collage
+                Box(
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .fillMaxHeight()
+                ) {
+                    FolderCoverCollage(
+                        previewArtworkUris = folder.previewArtUris,
+                        modifier = Modifier.fillMaxSize(),
+                        shape = RoundedCornerShape(topStart = cardCornerRadius, bottomStart = cardCornerRadius)
+                    )
+
+                    if (!isSquareMode) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .ditheredHorizontalCardScrim(gradientBaseColor)
+                        )
+                    }
+                }
+
+                // RIGHT: Content
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(gradientBaseColor)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = folder.name,
+                                style = MaterialTheme.typography.titleMedium.copy(fontFamily = GoogleSansRounded),
+                                fontWeight = FontWeight.Bold,
+                                color = onGradientColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = stringResource(R.string.favorite_albums_folder_type_label),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = onGradientColor.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val infoText = when {
+                                folder.subfolderCount > 0 && folder.albumCount > 0 ->
+                                    stringResource(R.string.favorite_albums_folder_subtitle, folder.subfolderCount.toString(), folder.albumCount.toString())
+                                folder.subfolderCount > 0 ->
+                                    stringResource(R.string.favorite_albums_folders_count, folder.subfolderCount)
+                                else ->
+                                    stringResource(R.string.favorite_albums_folder_item_desc, folder.albumCount)
+                            }
+                            Text(
+                                text = infoText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = onGradientColor.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = null,
+                                tint = onGradientColor.copy(alpha = 0.8f)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.favorite_albums_play_folder)) },
+                                leadingIcon = { Icon(Icons.Rounded.PlayArrow, null) },
+                                onClick = {
+                                    showMenu = false
+                                    onPlay()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.favorite_albums_shuffle_folder)) },
+                                leadingIcon = { Icon(Icons.Rounded.Shuffle, null) },
+                                onClick = {
+                                    showMenu = false
+                                    onShuffle()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.favorite_albums_rename_folder)) },
+                                leadingIcon = { Icon(Icons.Rounded.Edit, null) },
+                                onClick = {
+                                    showMenu = false
+                                    onRename()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.favorite_albums_delete_folder)) },
+                                leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showMenu = false
+                                    onDelete()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun FavoriteAlbumsEmptyState(
     isInsideFolder: Boolean,
     folderName: String?,
-    onAddAlbumsClick: () -> Unit,
     onCreateFolderClick: () -> Unit,
     bottomBarHeight: Dp
 ) {
@@ -1116,7 +1180,7 @@ private fun FavoriteAlbumsEmptyState(
                     stringResource(R.string.favorite_albums_empty_folder_title)
                 else
                     stringResource(R.string.favorite_albums_empty_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(fontFamily = GoogleSansRounded),
                 fontWeight = FontWeight.Bold
             )
 
@@ -1130,33 +1194,26 @@ private fun FavoriteAlbumsEmptyState(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            FilledTonalButton(
+                onClick = onCreateFolderClick,
+                shape = CircleShape
             ) {
-                FilledTonalButton(onClick = onAddAlbumsClick) {
-                    Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.favorite_albums_add_albums))
-                }
-
-                OutlinedButton(onClick = onCreateFolderClick) {
-                    Icon(Icons.Rounded.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        if (isInsideFolder)
-                            stringResource(R.string.favorite_albums_create_subfolder)
-                        else
-                            stringResource(R.string.favorite_albums_create_folder)
-                    )
-                }
+                Icon(Icons.Rounded.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isInsideFolder)
+                        stringResource(R.string.favorite_albums_create_subfolder)
+                    else
+                        stringResource(R.string.favorite_albums_create_folder),
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CreateFavoriteFolderDialog(
+internal fun CreateFavoriteFolderDialog(
     isSubfolder: Boolean,
     onDismiss: () -> Unit,
     onCreate: (String) -> Unit
@@ -1171,7 +1228,9 @@ private fun CreateFavoriteFolderDialog(
                 if (isSubfolder)
                     stringResource(R.string.favorite_albums_create_subfolder)
                 else
-                    stringResource(R.string.favorite_albums_create_folder)
+                    stringResource(R.string.favorite_albums_create_folder),
+                fontFamily = GoogleSansRounded,
+                fontWeight = FontWeight.SemiBold
             )
         },
         text = {
@@ -1180,7 +1239,8 @@ private fun CreateFavoriteFolderDialog(
                 onValueChange = { folderName = it },
                 label = { Text(stringResource(R.string.favorite_albums_folder_name_hint)) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
             )
         },
         confirmButton = {
@@ -1210,14 +1270,21 @@ private fun RenameFavoriteFolderDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
-        title = { Text(stringResource(R.string.favorite_albums_rename_folder)) },
+        title = {
+            Text(
+                stringResource(R.string.favorite_albums_rename_folder),
+                fontFamily = GoogleSansRounded,
+                fontWeight = FontWeight.SemiBold
+            )
+        },
         text = {
             OutlinedTextField(
                 value = newName,
                 onValueChange = { newName = it },
                 label = { Text(stringResource(R.string.favorite_albums_folder_name_hint)) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
             )
         },
         confirmButton = {
@@ -1245,7 +1312,13 @@ private fun DeleteFavoriteFolderDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-        title = { Text(stringResource(R.string.favorite_albums_delete_folder)) },
+        title = {
+            Text(
+                stringResource(R.string.favorite_albums_delete_folder),
+                fontFamily = GoogleSansRounded,
+                fontWeight = FontWeight.SemiBold
+            )
+        },
         text = { Text(stringResource(R.string.favorite_albums_delete_folder_confirm, folder.name)) },
         confirmButton = {
             TextButton(
@@ -1262,247 +1335,9 @@ private fun DeleteFavoriteFolderDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MoveAlbumToFolderSheet(
-    album: Album,
-    allFolders: List<FavoriteAlbumFolder>,
-    onDismiss: () -> Unit,
-    onMoveToFolder: (albumId: Long, targetFolderId: String?, targetFolderName: String) -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState()
-    val rootName = stringResource(R.string.favorite_albums_root_folder)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.favorite_albums_move_to_folder),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            )
-
-            Text(
-                text = album.title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider()
-
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                // Option: Root / Main Favorites
-                item {
-                    ListItem(
-                        headlineContent = { Text(rootName, fontWeight = FontWeight.SemiBold) },
-                        leadingContent = {
-                            Icon(Icons.Rounded.Home, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        },
-                        modifier = Modifier.clickable {
-                            onMoveToFolder(album.id, null, rootName)
-                        }
-                    )
-                }
-
-                // All folders
-                items(allFolders, key = { it.id }) { folder ->
-                    ListItem(
-                        headlineContent = { Text(folder.name) },
-                        supportingContent = {
-                            Text(stringResource(R.string.favorite_albums_folder_item_desc, folder.albumCount))
-                        },
-                        leadingContent = {
-                            Icon(Icons.Rounded.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                        },
-                        modifier = Modifier.clickable {
-                            onMoveToFolder(album.id, folder.id, folder.name)
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AddAlbumsToFolderSheet(
-    allAlbums: List<Album>,
-    currentAlbumIds: Set<Long>,
-    folderName: String,
-    onDismiss: () -> Unit,
-    onAdd: (List<Long>) -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var searchQuery by remember { mutableStateOf("") }
-    val selectedIds = remember { mutableStateListOf<Long>() }
-
-    // Filter available albums (excluding ones already in this folder)
-    val availableAlbums = remember(allAlbums, currentAlbumIds, searchQuery) {
-        val filtered = allAlbums.filterNot { currentAlbumIds.contains(it.id) }
-        if (searchQuery.isBlank()) {
-            filtered
-        } else {
-            val q = searchQuery.trim().lowercase()
-            filtered.filter {
-                it.title.lowercase().contains(q) || it.artist.lowercase().contains(q)
-            }
-        }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.favorite_albums_add_albums),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = folderName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Button(
-                    onClick = { onAdd(selectedIds.toList()) },
-                    enabled = selectedIds.isNotEmpty()
-                ) {
-                    Text(stringResource(R.string.favorite_albums_add_selected, selectedIds.size))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text(stringResource(R.string.favorite_albums_search_hint)) },
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Rounded.Clear, contentDescription = null)
-                        }
-                    }
-                },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Select all / Deselect all row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.favorite_albums_count, availableAlbums.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                TextButton(
-                    onClick = {
-                        if (selectedIds.size == availableAlbums.size) {
-                            selectedIds.clear()
-                        } else {
-                            selectedIds.clear()
-                            selectedIds.addAll(availableAlbums.map { it.id })
-                        }
-                    }
-                ) {
-                    Text(
-                        if (selectedIds.size == availableAlbums.size && availableAlbums.isNotEmpty())
-                            stringResource(R.string.queue_save_as_playlist_deselect_all)
-                        else
-                            stringResource(R.string.common_select_all)
-                    )
-                }
-            }
-
-            HorizontalDivider()
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(380.dp),
-                contentPadding = PaddingValues(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(availableAlbums, key = { it.id }) { album ->
-                    val isChecked = selectedIds.contains(album.id)
-                    ListItem(
-                        headlineContent = {
-                            Text(album.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        },
-                        supportingContent = {
-                            Text(album.artist, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        },
-                        leadingContent = {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(album.albumArtUriString)
-                                    .crossfade(true)
-                                    .error(R.drawable.ic_music_placeholder)
-                                    .build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
-                        },
-                        trailingContent = {
-                            Checkbox(
-                                checked = isChecked,
-                                onCheckedChange = { checked ->
-                                    if (checked) selectedIds.add(album.id) else selectedIds.remove(album.id)
-                                }
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (isChecked) selectedIds.remove(album.id) else selectedIds.add(album.id)
-                            }
-                    )
-                }
-            }
-        }
-    }
-}
-
+/**
+ * Modern Expressive Bottom Sheet for Album Actions in Favorites (Screenshot 3 replacement).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FavoriteAlbumActionSheet(
@@ -1510,56 +1345,310 @@ private fun FavoriteAlbumActionSheet(
     onDismiss: () -> Unit,
     onPlay: () -> Unit,
     onMoveToFolder: () -> Unit,
+    onCreateFolder: () -> Unit,
     onRemoveFromFavorites: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 4.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp)
+                .padding(vertical = 12.dp)
         ) {
-            ListItem(
-                headlineContent = { Text(album.title, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                supportingContent = { Text(album.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                leadingContent = {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(album.albumArtUriString)
-                            .crossfade(true)
-                            .error(R.drawable.ic_music_placeholder)
-                            .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(RoundedCornerShape(10.dp))
+            // Header: Squircle album artwork + title + artist
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(album.albumArtUriString)
+                        .crossfade(true)
+                        .error(R.drawable.ic_music_placeholder)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = album.title,
+                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = GoogleSansRounded),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = album.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Action Items
+            ExpressiveSheetActionItem(
+                icon = Icons.Rounded.PlayArrow,
+                label = stringResource(R.string.common_play_album),
+                onClick = onPlay
+            )
+            ExpressiveSheetActionItem(
+                icon = Icons.AutoMirrored.Rounded.DriveFileMove,
+                label = stringResource(R.string.favorite_albums_move_to_folder),
+                onClick = onMoveToFolder
+            )
+            ExpressiveSheetActionItem(
+                icon = Icons.Rounded.CreateNewFolder,
+                label = stringResource(R.string.favorite_albums_create_folder),
+                iconTint = MaterialTheme.colorScheme.tertiary,
+                onClick = onCreateFolder
+            )
+            ExpressiveSheetActionItem(
+                icon = Icons.Rounded.Delete,
+                label = stringResource(R.string.favorite_albums_remove_from_favorites),
+                isDestructive = true,
+                onClick = onRemoveFromFavorites
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+/**
+ * Modern Expressive Bottom Sheet for Moving an Album to a Folder.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MoveAlbumToFolderSheet(
+    album: Album,
+    allFolders: List<FavoriteAlbumFolder>,
+    onDismiss: () -> Unit,
+    onCreateFolder: () -> Unit,
+    onMoveToFolder: (albumId: Long, targetFolderId: String?, targetFolderName: String) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val rootName = stringResource(R.string.favorite_albums_root_folder)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.favorite_albums_move_to_folder),
+                    style = MaterialTheme.typography.titleLarge.copy(fontFamily = GoogleSansRounded),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = album.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Action: Create New Folder right from move sheet
+            ExpressiveSheetActionItem(
+                icon = Icons.Rounded.CreateNewFolder,
+                label = stringResource(R.string.favorite_albums_create_folder),
+                iconTint = MaterialTheme.colorScheme.tertiary,
+                onClick = {
+                    onDismiss()
+                    onCreateFolder()
                 }
             )
 
-            HorizontalDivider()
-
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.common_play_album)) },
-                leadingContent = { Icon(Icons.Rounded.PlayArrow, null) },
-                modifier = Modifier.clickable(onClick = onPlay)
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
 
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.favorite_albums_move_to_folder)) },
-                leadingContent = { Icon(Icons.Rounded.DriveFileMove, null) },
-                modifier = Modifier.clickable(onClick = onMoveToFolder)
-            )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // Root / Main Favorites
+                item {
+                    ExpressiveFolderMoveItem(
+                        icon = Icons.Rounded.Home,
+                        title = rootName,
+                        subtitle = stringResource(R.string.favorite_albums_tab_title),
+                        onClick = { onMoveToFolder(album.id, null, rootName) }
+                    )
+                }
 
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.favorite_albums_remove_from_favorites), color = MaterialTheme.colorScheme.error) },
-                leadingContent = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                modifier = Modifier.clickable(onClick = onRemoveFromFavorites)
+                // All folders
+                items(allFolders, key = { it.id }) { folder ->
+                    val subtitle = when {
+                        folder.subfolderCount > 0 && folder.albumCount > 0 ->
+                            stringResource(R.string.favorite_albums_folder_subtitle, folder.subfolderCount.toString(), folder.albumCount.toString())
+                        folder.subfolderCount > 0 ->
+                            stringResource(R.string.favorite_albums_folders_count, folder.subfolderCount)
+                        else ->
+                            stringResource(R.string.favorite_albums_folder_item_desc, folder.albumCount)
+                    }
+                    ExpressiveFolderMoveItem(
+                        icon = Icons.Rounded.Folder,
+                        title = folder.name,
+                        subtitle = subtitle,
+                        previewArtUris = folder.previewArtUris,
+                        onClick = { onMoveToFolder(album.id, folder.id, folder.name) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Reusable pill-shaped action item for bottom sheets.
+ */
+@Composable
+private fun ExpressiveSheetActionItem(
+    icon: ImageVector,
+    label: String,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    isDestructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                if (isDestructive) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
+                else MaterialTheme.colorScheme.surfaceContainerHigh
+            )
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isDestructive) MaterialTheme.colorScheme.errorContainer
+                    else MaterialTheme.colorScheme.surfaceContainerHighest
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (isDestructive) MaterialTheme.colorScheme.error else iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium,
+            color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun ExpressiveFolderMoveItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    previewArtUris: List<String?> = emptyList(),
+    onClick: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            }
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        if (previewArtUris.isNotEmpty()) {
+            FolderCoverCollage(
+                previewArtworkUris = previewArtUris,
+                modifier = Modifier.size(44.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

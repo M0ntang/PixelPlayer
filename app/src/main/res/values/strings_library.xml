@@ -21,6 +21,7 @@
     <string name="favorite_albums_add">Add to Favorites</string>
     <string name="favorite_albums_remove">Remove from Favorites</string>
     <string name="favorite_albums_create_folder">Create folder</string>
+    <string name="favorite_albums_folder_type_label">Folder</string>
     <string name="favorite_albums_create_subfolder">Create subfolder</string>
     <string name="favorite_albums_new_folder_title">New folder</string>
     <string name="favorite_albums_folder_name_hint">Folder name</string>

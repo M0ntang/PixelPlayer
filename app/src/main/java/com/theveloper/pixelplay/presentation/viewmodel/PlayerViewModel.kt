@@ -2819,6 +2819,10 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun shuffleFavoriteAlbums(folderId: String? = _favoriteAlbumsCurrentFolderId.value) {
+        playFavoriteAlbumFolder(folderId, shuffle = true)
+    }
+
     fun setFoldersPlaylistView(isPlaylistView: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setFoldersPlaylistView(isPlaylistView)
